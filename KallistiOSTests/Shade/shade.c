@@ -25,7 +25,7 @@ void draw_texture(pvr_ptr_t name, uint16_t x, uint16_t y, int dim, uint8_t list,
 	int z = 1;
 	pvr_poly_cxt_t cxt;
 	pvr_poly_hdr_t hdr;
-	pvr_vertex_t vert;
+	pvr_vertex_t vert[4];
 
 	pvr_poly_cxt_txr(&cxt, list, textureformat, dim, dim, name, filtering);
 	pvr_poly_compile(&hdr, &cxt);
@@ -36,55 +36,60 @@ void draw_texture(pvr_ptr_t name, uint16_t x, uint16_t y, int dim, uint8_t list,
 	if(list == PVR_LIST_TR_POLY){
 		if(colour_state == 0){
 			float invalpha = (1.0f - alpha);
-			vert.argb = PVR_PACK_COLOR(1.0f, invalpha, invalpha, invalpha);
-			vert.oargb = PVR_PACK_COLOR(1, (0.6f * alpha), (0.6f * alpha), (1.0f * alpha));	//Fade to blue
-			// vert.oargb = PVR_PACK_COLOR(1, 0.0f, 0.0f, 0.0f);	//Fade to black
+			vert[0].argb = PVR_PACK_COLOR(1.0f, invalpha, invalpha, invalpha);
+			vert[0].oargb = PVR_PACK_COLOR(1, (0.6f * alpha), (0.6f * alpha), (1.0f * alpha));	//Fade to blue
+			// vert[0].oargb = PVR_PACK_COLOR(1, 0.0f, 0.0f, 0.0f);	//Fade to black
 		}
 		else if(colour_state == 1){
-			vert.argb = 0xffffffff;
-			vert.oargb = PVR_PACK_COLOR(1, (0.6f * alpha), (0.6f * alpha), (1.0f * alpha));	//Add blue
+			vert[0].argb = 0xffffffff;
+			vert[0].oargb = PVR_PACK_COLOR(1, (0.6f * alpha), (0.6f * alpha), (1.0f * alpha));	//Add blue
 		}
 		else if(colour_state == 2){
-			vert.argb = 0xffffffff;
-			vert.oargb = PVR_PACK_COLOR(1, alpha, alpha, alpha);	//Fade to white (By adding white)
+			vert[0].argb = 0xffffffff;
+			vert[0].oargb = PVR_PACK_COLOR(1, alpha, alpha, alpha);	//Fade to white (By adding white)
 		}
 		
 	}
 	else{
-		vert.argb = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
-		vert.oargb = 0;
+		vert[0].argb = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
+		vert[0].oargb = 0;
 	}
-	vert.flags = PVR_CMD_VERTEX;    //I think this is used to define the start of a new polygon
 
-	//These define the verticies of the triangles "strips" (One triangle uses verticies of other triangle)
-	vert.x = x;
-	vert.y = y;
-	vert.z = z;
-	vert.u = 0.0;
-	vert.v = 0.0;
-	pvr_prim(&vert, sizeof(vert));
+	vert[0].flags = PVR_CMD_VERTEX;    //I think this is used to define the start of a new polygon
 
-	vert.x = x + dim;
-	vert.y = y;
-	vert.z = z;
-	vert.u = 1;
-	vert.v = 0.0;
-	pvr_prim(&vert, sizeof(vert));
+	uint8_t i;
+	for(i = 1; i < 4; i++){
+		vert[i].argb = vert[0].argb;
+		vert[i].oargb = vert[0].oargb;
+		vert[i].flags = PVR_CMD_VERTEX;
 
-	vert.x = x;
-	vert.y = y + dim;
-	vert.z = z;
-	vert.u = 0.0;
-	vert.v = 1;
-	pvr_prim(&vert, sizeof(vert));
+	}
+	vert[3].flags = PVR_CMD_VERTEX_EOL;
 
-	vert.x = x + dim;
-	vert.y = y + dim;
-	vert.z = z;
-	vert.u = 1;
-	vert.v = 1;
-	vert.flags = PVR_CMD_VERTEX_EOL;
-	pvr_prim(&vert, sizeof(vert));
+	vert[0].x = x;
+	vert[0].y = y;
+	vert[0].z = z;
+	vert[0].u = 0.0;
+	vert[0].v = 0.0;
+
+	vert[1].x = x + dim;
+	vert[1].y = y;
+	vert[1].z = z;
+	vert[1].u = 1;
+	vert[1].v = 0.0;
+
+	vert[2].x = x;
+	vert[2].y = y + dim;
+	vert[2].z = z;
+	vert[2].u = 0.0;
+	vert[2].v = 1;
+
+	vert[3].x = x + dim;
+	vert[3].y = y + dim;
+	vert[3].z = z;
+	vert[3].u = 1;
+	vert[3].v = 1;
+	pvr_prim(&vert, sizeof(pvr_vertex_t) * 4);
 }
 
 // Draw one frame
