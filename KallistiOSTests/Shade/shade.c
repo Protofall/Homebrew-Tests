@@ -5,7 +5,7 @@
 pvr_ptr_t pic, nerstr, controls;		//To store the image from pic.png, nerstr.png and controls.png
 
 uint8_t colour_state;
-float alpha = 0.5f;
+float fade = 0.5f;
 
 // Init pic
 void pic_init(){
@@ -34,19 +34,19 @@ void draw_texture(pvr_ptr_t name, uint16_t x, uint16_t y, int dim, uint8_t list,
 
 	//Only nerstr is in the OP list so this will work fine
 	if(list == PVR_LIST_TR_POLY){
-		if(colour_state == 0){
-			float invalpha = (1.0f - alpha);
-			vert[0].argb = PVR_PACK_COLOR(1.0f, invalpha, invalpha, invalpha);
-			vert[0].oargb = PVR_PACK_COLOR(1, (0.6f * alpha), (0.6f * alpha), (1.0f * alpha));	//Fade to blue
-			// vert[0].oargb = PVR_PACK_COLOR(1, 0.0f, 0.0f, 0.0f);	//Fade to black
+		float alpha = 0.25;
+		if(colour_state == 0){	//A
+			float invfade = (1.0f - fade);
+			vert[0].argb = PVR_PACK_COLOR(alpha, invfade, invfade, invfade);
+			vert[0].oargb = PVR_PACK_COLOR(alpha, (0.6f * fade), (0.6f * fade), (1.0f * fade));	//Fade to blue (Blend)
 		}
-		else if(colour_state == 1){
-			vert[0].argb = 0xffffffff;
-			vert[0].oargb = PVR_PACK_COLOR(1, (0.6f * alpha), (0.6f * alpha), (1.0f * alpha));	//Add blue
+		else if(colour_state == 1){	//B
+			vert[0].argb = PVR_PACK_COLOR(alpha, 1.0, 1.0, 1.0);
+			vert[0].oargb = PVR_PACK_COLOR(alpha, (0.6f * fade), (0.6f * fade), (1.0f * fade));	//Add blue
 		}
-		else if(colour_state == 2){
-			vert[0].argb = 0xffffffff;
-			vert[0].oargb = PVR_PACK_COLOR(1, alpha, alpha, alpha);	//Fade to white (By adding white)
+		else if(colour_state == 2){	//X
+			vert[0].argb = PVR_PACK_COLOR(alpha, 1.0, 1.0, 1.0);
+			vert[0].oargb = PVR_PACK_COLOR(alpha, fade, fade, fade);	//Fade to white (By adding white)
 		}
 		
 	}
@@ -154,21 +154,21 @@ int main(void){
 		}
 		
 		if(st->buttons & CONT_DPAD_UP){
-			alpha += 0.02;
+			fade += 0.02;
 		}
 		if(st->buttons & CONT_DPAD_DOWN){
-			alpha -= 0.02;
+			fade -= 0.02;
 		}
 
 		prev_buttons[__dev->port] = st->buttons;
 
 		MAPLE_FOREACH_END()
 		
-		if(alpha < 0.0f){
-			alpha = 0.0f;
+		if(fade < 0.0f){
+			fade = 0.0f;
 		}
-		else if(alpha > 1.0f){
-			alpha = 1.0f;
+		else if(fade > 1.0f){
+			fade = 1.0f;
 		}
 
 		draw_frame();
