@@ -34,7 +34,7 @@ void draw_texture(pvr_ptr_t name, uint16_t x, uint16_t y, int dim, uint8_t list,
 
 	//Only nerstr is in the OP list so this will work fine
 	if(list == PVR_LIST_TR_POLY){
-		float alpha = 0.25;
+		float alpha = 1.0;
 		if(colour_state == 0){	//A
 			float invfade = (1.0f - fade);
 			vert[0].argb = PVR_PACK_COLOR(alpha, invfade, invfade, invfade);
@@ -46,7 +46,7 @@ void draw_texture(pvr_ptr_t name, uint16_t x, uint16_t y, int dim, uint8_t list,
 		}
 		else if(colour_state == 2){	//X
 			vert[0].argb = PVR_PACK_COLOR(alpha, 1.0, 1.0, 1.0);
-			vert[0].oargb = PVR_PACK_COLOR(alpha, fade, fade, fade);	//Fade to white (By adding white)
+			vert[0].oargb = PVR_PACK_COLOR(alpha, (1.0f * fade), (1.0f * fade), (1.0f * fade));	//Fade to white (By adding white)
 		}
 		
 	}
