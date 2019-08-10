@@ -8,7 +8,7 @@ SCRAMBLED = 1st_read.bin
 
 KOS_LOCAL_CFLAGS = -I$(KOS_BASE)/addons/zlib
 
-LIBS = -lkosfatfs -lz -lm $(KOS_LIBS)
+LIBS = -lkosfat -lz -lm $(KOS_LIBS)
 
 all: clean $(SCRAMBLED)
 
