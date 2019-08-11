@@ -17,7 +17,7 @@
 
 #include "debug.h"	//For error_freeze
 
-#define MNT_MODE FS_FAT_MOUNT_READWRITE	//Might manually change it so its not a define anymore
+#define MNT_MODE FS_FAT_MOUNT_READONLY
 
 static void unmount_fat_sd(){
 	fs_fat_unmount("/sd");
@@ -41,14 +41,14 @@ static int mount_fat_sd(){
 	}
 
 	// Check to see if the MBR says that we have a valid partition
-	if(partition_type != 0x83){
+	// if(partition_type != 0x83){
 		//I don't know what value I should be comparing against, hence this check is disabled for now
 		// This: https://en.wikipedia.org/wiki/Partition_type
 			//Suggests there's multiple types for FAT...not sure how to handle this
 		// return 3;
-	}
+	// }
 
-	// Initialize fs_ext2 and attempt to mount the device
+	// Initialize fs_fat and attempt to mount the device
 	if(fs_fat_init()){
 		return 4;
 	}
@@ -63,7 +63,7 @@ static int mount_fat_sd(){
 int main(){
 	int sdRes = mount_fat_sd();	//This function should be able to mount an ext2 formatted sd card to the /sd dir	
 	if(sdRes != 0){
-		error_freeze("sdRes = %d\n", sdRes);
+		error_freeze("\nsdRes = %d\n", sdRes);	//Hopefully the \n will push it one line down...
 	}
 
 	void *prog;
