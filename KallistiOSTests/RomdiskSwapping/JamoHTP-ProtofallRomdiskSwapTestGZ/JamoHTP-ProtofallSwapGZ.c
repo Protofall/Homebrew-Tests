@@ -139,7 +139,7 @@ int main(){
   while(!done){
     MAPLE_FOREACH_BEGIN(MAPLE_FUNC_CONTROLLER, cont_state_t, st)
 
-    if(st->buttons & CONT_START){  // Quits if start is pressed. Screen goes black (This code behaves weirdly, I don't get it)
+    if(st->buttons & CONT_START){	//Quits if start is pressed
       done = 1;
     }
 

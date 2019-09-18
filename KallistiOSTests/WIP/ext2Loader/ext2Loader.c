@@ -83,7 +83,7 @@ void indent(uint8_t hovering){
 void print_dir(uint16_t cursor_pos, uint16_t counter_pos, uint16_t * file_count){
 	file_t d;
 	dirent_t * de;
-	d = fs_open("/", O_RDONLY | O_DIR);
+	d = fs_open("/pc", O_RDONLY | O_DIR);
 	while(1){
 		if(counter_pos == 0){
 			indent(counter_pos == cursor_pos);

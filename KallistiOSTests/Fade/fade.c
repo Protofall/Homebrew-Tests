@@ -146,8 +146,9 @@ int main(void){
     while(!done){
         MAPLE_FOREACH_BEGIN(MAPLE_FUNC_CONTROLLER, cont_state_t, st)
 
-        if(st->buttons & CONT_START)	//Quits if start is pressed. Screen goes black
+        if(st->buttons & CONT_START){	//Quits if start is pressed. Screen goes black
             done = 1;
+	}
 
         MAPLE_FOREACH_END()
 

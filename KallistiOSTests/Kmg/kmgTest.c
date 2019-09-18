@@ -152,16 +152,14 @@ int main(){
     uint32 w, h, format;
     back = load_kmg("/rd/image.kmg", &w, &h, &format);
     face = load_kmg("/rd/nerstr.kmg", &w, &h, &format);
-    //if(back){
-    //   printf("Loaded /rd/image.kmg with dimensions %ux%u, format %u\n", w, h, format);
-    //}
     int done = 0;
 
     while(!done){
       MAPLE_FOREACH_BEGIN(MAPLE_FUNC_CONTROLLER, cont_state_t, st)
 
-      if(st->buttons & CONT_START)  //Quits if start is pressed. Screen goes black (This code behaves weirdly, I don't get it)
+      if(st->buttons & CONT_START){	//Quits if start is pressed
         done = 1;
+      }
 
       MAPLE_FOREACH_END()
 
