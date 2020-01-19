@@ -270,7 +270,7 @@ int main(){
 	uint16_t save_res = 0;
 	if(savefile_details.valid_memcards){
 		save_res = crayon_savefile_save(&savefile_details);
-		savefile_details.valid_saves = crayon_savefile_get_valid_saves(&savefile_details);
+		crayon_savefile_update_valid_saves(&savefile_details, CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT);	//Updating the save
 	}
 
 	#if CRAYON_BOOT_MODE == 1
