@@ -44,13 +44,15 @@ uint8_t al_init(){
 	alListenerfv(AL_ORIENTATION, listenerOri);
 	if(al_test_error(&error, "listener orientation") == AL_TRUE){return 1;}
 
+	// alListenerfi(AL_GAIN, 1.0f);
+	// if(al_test_error(&error, "listener gain") == AL_TRUE){return 1;}
+
 	return 0;
 }
 
 void al_shutdown(){
-	// alDeleteSources(1, &source);
-	// alDeleteBuffers(1, &buffer);
-	al_device = alcGetContextsDevice(al_context);	//With only one device/context, this line might not be required
+	// al_context = alcGetCurrentContext();	//With only one device/context, this line might not be required
+	// al_device = alcGetContextsDevice(al_context);
 	alcMakeContextCurrent(NULL);
 	alcDestroyContext(al_context);
 	alcCloseDevice(al_device);
@@ -140,7 +142,7 @@ int convert_to_int(char * buffer, int len){
 	// }
 // }
 
-ALboolean LoadWAVFile(const char * filename, al_audio_data_t * audio_data, uint8_t mode){
+ALboolean LoadWAVFile(const char * filename, al_audio_info_t * audio_data, uint8_t mode){
 	audio_data->play_type = mode;
 	uint16_t length = strlen(filename);
 	switch(mode){

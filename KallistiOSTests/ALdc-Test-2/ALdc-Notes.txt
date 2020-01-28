@@ -39,6 +39,12 @@ Nm, the file pointer is a global and for both calls its closed at later points. 
 	- The "rewind" function stops the source and sets its state to AL_INITIAL
 
 
-QUESTIONS
+QUESTIONS:
 - what exactly is a "buffer". I think the variable we are using is just a number/id, but it seems to point to a buffer in memory. Is this in RAM or Sound RAM?
+	- Do I need one buffer per "sound"? Eg. Music + explosion sound + footstep sound requires 3 buffers
 - Once I've setup the context and device, do I need to worry about them again until shutdown? Docs seem to suggest they need to know about the sources/buffers/listener, but I don't see why
+- Docs example reference "unloadWAV()". Is this a part of OpenAL or just a custom function? I think the latter, but I'm not sure
+- Pg 14. "Queuing Buffers on a Source". Why is this method not used in the ALdc sample?
+
+IDEAS:
+If I can't find a proper way to adjust volume, I can just move the source closer/away from the listener

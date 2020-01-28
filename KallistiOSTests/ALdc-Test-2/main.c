@@ -66,7 +66,7 @@ int main(int argc, char **argv){
 								//Seems "buffer" is just an ID and doesn't actually contain the data?
 	if(al_test_error(&error, "buffer generation") == AL_TRUE){return -1;}
 
-	al_audio_data_t audio_data;
+	al_audio_info_t audio_data;
 
 #ifdef _arch_dreamcast
     if(!LoadWAVFile("/rd/test.wav", &audio_data, AL_AS_TYPE_NON_STREAM)){
@@ -82,6 +82,7 @@ int main(int argc, char **argv){
 
 	alBufferData(buffer, audio_data.format, audio_data.data, audio_data.size, audio_data.freq);	//Fill the buffer with PCM data
 	if(al_test_error(&error, "buffer copy") == AL_TRUE){return -1;}
+	free(audio_data.data);	//Its no longer required
 
 	alSourcei(source, AL_BUFFER, buffer);
 	if(al_test_error(&error, "buffer binding") == AL_TRUE){return -1;}
@@ -98,6 +99,11 @@ int main(int argc, char **argv){
 		if(al_test_error(&error, "source state get") == AL_TRUE){return -1;}
         thd_pass();
 	}
+
+	alDeleteSources(1, &source);	//1st param is number of buffers
+	alDeleteBuffers(1, &buffer);
+
+	// early_shutdown:	//Need to modify those failures to free up memory if they fail
 
 	al_shutdown();
 	if(audio_data.path != NULL){	//Only CDDA audio doesn't have a path

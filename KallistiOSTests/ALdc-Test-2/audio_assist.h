@@ -13,7 +13,7 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
-typedef struct al_audio_data{
+typedef struct al_audio_info{
 	uint8_t play_type;	//In RAM or streaming. We can only have one streaming at a time
 	// FILE * fp;	//Usually NULL, but points to file if its streaming
 	uint8_t is_cdda;
@@ -22,19 +22,19 @@ typedef struct al_audio_data{
 	ALvoid * data;
 	ALsizei size, freq;
 	ALenum format;
-} al_audio_data_t;
+} al_audio_info_t;
 
 typedef struct vec2_f{
 	float x, y;
 } vec2_f_t;
 
 typedef struct al_audio_sound{
-	al_audio_data_t * sound;
+	al_audio_info_t * sound;
 	vec2_f_t position;	//Since we are doing 2D we only need two
 						//velocity is always zero
 
 	uint8_t loop;
-	uint8_t volume;
+	float volume;
 	float speed;
 
 	ALuint source_data;	//The source it uses
@@ -45,7 +45,7 @@ ALCcontext * al_context;	//We only need one for all audio
 ALCdevice * al_device;
 
 FILE * al_streamer_fp;	//If NULL then we don't have a streamer struct, else something is streaming
-al_audio_data_t * al_streamer;	//Is null if none are streaming, otherwise points to the only streaming struct
+al_audio_info_t * al_streamer;	//Is null if none are streaming, otherwise points to the only streaming struct
 
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -70,6 +70,6 @@ int convert_to_int(char * buffer, int len);
 #define AL_AS_TYPE_NON_STREAM 0
 #define AL_AS_TYPE_STREAM 1
 #define AL_AS_TYPE_CDDA 2
-ALboolean LoadWAVFile(const char * filename, al_audio_data_t * audio_data, uint8_t mode);
+ALboolean LoadWAVFile(const char * filename, al_audio_info_t * audio_data, uint8_t mode);
 
 #endif
