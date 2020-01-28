@@ -15,7 +15,7 @@
 
 typedef struct al_audio_data{
 	uint8_t play_type;	//In RAM or streaming. We can only have one streaming at a time
-	FILE * fp;	//Usually NULL, but points to file if its streaming
+	// FILE * fp;	//Usually NULL, but points to file if its streaming
 	uint8_t is_cdda;
 	char * path;	//NULL if CDDA
 
@@ -35,6 +35,7 @@ typedef struct al_audio_sound{
 
 	uint8_t loop;
 	uint8_t volume;
+	float speed;
 
 	ALuint source_data;	//The source it uses
 	ALint source_state;
@@ -43,13 +44,14 @@ typedef struct al_audio_sound{
 ALCcontext * al_context;	//We only need one for all audio
 ALCdevice * al_device;
 
+FILE * al_streamer_fp;	//If NULL then we don't have a streamer struct, else something is streaming
 al_audio_data_t * al_streamer;	//Is null if none are streaming, otherwise points to the only streaming struct
 
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-ALboolean al_init();
+uint8_t al_init();	//Returns 1 if an error occured, 0 otherwise
 
 void al_shutdown();
 
@@ -57,7 +59,7 @@ ALboolean al_test_error(ALCenum * error, char * msg);
 
 void list_audio_devices(const ALCchar *devices);
 
-inline ALenum to_al_format(short channels, short samples);
+inline ALenum to_al_format(short channels, short samples);	//Unused
 
 bool is_big_endian();
 

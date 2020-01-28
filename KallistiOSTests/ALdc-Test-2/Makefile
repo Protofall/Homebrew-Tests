@@ -1,4 +1,5 @@
-TARGET = basic.elf
+PROG = audio_2d_api
+TARGET = $(PROG).elf
 OBJS = main.o audio_assist.o
 
 CFLAGS   += $(KOS_CFLAGS)
@@ -27,6 +28,9 @@ clean:
 
 rm-elf:
 	-rm -f $(TARGET) romdisk.*
+
+cdi: $(TARGET)
+	elf-to-cdi.sh $(PROG)
 
 $(TARGET): $(OBJS) romdisk.o
 	$(KOS_CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(KOS_START) \

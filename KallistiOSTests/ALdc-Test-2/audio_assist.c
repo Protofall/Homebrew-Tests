@@ -1,10 +1,9 @@
 #include "audio_assist.h"
 
-ALboolean al_init(){
+uint8_t al_init(){
 	ALboolean enumeration;
-	const ALCchar *defaultDeviceName;
 	ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
-	ALCenum error = AL_FALSE;
+	ALCenum error;
 
 	enumeration = alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT");
 	if(enumeration == AL_FALSE){
@@ -13,48 +12,45 @@ ALboolean al_init(){
 
 	list_audio_devices(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
 
+	// const ALCchar *defaultDeviceName;
 	// if(!defaultDeviceName){
-		defaultDeviceName = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+	// 	defaultDeviceName = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
 	// }
-
-	al_device = alcOpenDevice(defaultDeviceName);
+	// al_device = alcOpenDevice(defaultDeviceName);
+	al_device = alcOpenDevice(NULL);	//Chooses the preferred/default device
 	if(!al_device){
 		fprintf(stderr, "unable to open default device\n");
-		return AL_FALSE;
+		return 1;
 	}
 
     // fprintf(stdout, "Device: %s\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
 
-	alGetError();
+	alGetError();	//This resets the error state
 
 	al_context = alcCreateContext(al_device, NULL);
 	if(!alcMakeContextCurrent(al_context)){
 		fprintf(stderr, "failed to make default context\n");
-		return AL_FALSE;
+		return 1;
 	}
-	al_test_error(&error, "make default context");
-	if(error == AL_TRUE){return AL_FALSE;}
+	if(al_test_error(&error, "make default context") == AL_TRUE){return 1;}
 
 	// set orientation
 	alListener3f(AL_POSITION, 0, 0, 1.0f);
-	al_test_error(&error, "listener position");
-	if(error == AL_TRUE){return AL_FALSE;}
+	if(al_test_error(&error, "listener position") == AL_TRUE){return 1;}
 
     alListener3f(AL_VELOCITY, 0, 0, 0);
-	al_test_error(&error, "listener velocity");
-	if(error == AL_TRUE){return AL_FALSE;}
+	if(al_test_error(&error, "listener velocity") == AL_TRUE){return 1;}
 
 	alListenerfv(AL_ORIENTATION, listenerOri);
-	al_test_error(&error, "listener orientation");
-	if(error == AL_TRUE){return AL_FALSE;}
+	if(al_test_error(&error, "listener orientation") == AL_TRUE){return 1;}
 
-	return AL_TRUE;
+	return 0;
 }
 
 void al_shutdown(){
 	// alDeleteSources(1, &source);
 	// alDeleteBuffers(1, &buffer);
-	al_device = alcGetContextsDevice(al_context);
+	al_device = alcGetContextsDevice(al_context);	//With only one device/context, this line might not be required
 	alcMakeContextCurrent(NULL);
 	alcDestroyContext(al_context);
 	alcCloseDevice(al_device);
