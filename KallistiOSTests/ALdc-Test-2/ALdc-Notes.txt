@@ -37,6 +37,8 @@ Nm, the file pointer is a global and for both calls its closed at later points. 
 - Related to playback: alSourcePlayv, alSourcePause, alSourcePausev, alSourceRewind, alSourceRewindv, alSourceStop, alSourceStopv
 	- The 'v' versions seem to apply the function to multiple sources
 	- The "rewind" function stops the source and sets its state to AL_INITIAL
+- Seems in OpenAL gain is sound and master volume is set by the listener https://stackoverflow.com/questions/3814564/how-to-adjust-the-volume-of-a-sound-in-openal
+- Playback speed is controlled by the pitch alSourcef(source, AL_PITCH, 0.5f); //Half speed
 
 
 QUESTIONS:
