@@ -1,6 +1,9 @@
 #include "audio_assist.h"
 
 uint8_t al_init(){
+	al_streamer_source = NULL;
+	al_streamer_fp = NULL;
+
 	ALboolean enumeration;
 	ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };	//Double check what these vars mean
 	ALCenum error;
@@ -10,7 +13,7 @@ uint8_t al_init(){
 		fprintf(stderr, "enumeration extension not available\n");
 	}
 
-	list_audio_devices(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
+	al_list_audio_devices(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
 
 	// const ALCchar *defaultDeviceName;
 	// if(!defaultDeviceName){
@@ -57,9 +60,13 @@ void al_shutdown(){
 }
 
 ALboolean al_load_WAV_file_info(const char * filename, al_audio_info_t * info, uint8_t mode){
+	if((mode & AL_AS_TYPE_STREAM) && (al_streamer_source != NULL || al_streamer_fp != NULL)){
+		return AL_FALSE;
+	}
+
 	info->play_type = mode & AL_AS_TYPE_STREAM;
 	uint16_t length = strlen(filename);
-	switch(mode){
+	switch(info->play_type){
 		case AL_AS_TYPE_NON_STREAM:
 			info->is_cdda = 0;
 			info->path = malloc(sizeof(char) * length);
@@ -84,6 +91,10 @@ ALboolean al_load_WAV_file_info(const char * filename, al_audio_info_t * info, u
 		return AL_FALSE;
 	}
 
+	// fseek(in, 0, SEEK_END);
+	// info->size = (ALsizei) (ftell(in) - WAV_HDR_SIZE);	//This is the true size of the file
+	// fseek(in, 0, SEEK_SET);
+
 	fread(buffer, 4, sizeof(char), in);
 
 	if(strncmp(buffer, "RIFF", 4) != 0){
@@ -107,9 +118,15 @@ ALboolean al_load_WAV_file_info(const char * filename, al_audio_info_t * info, u
 	int bps = convert_to_int(buffer, 2);
 	fread(buffer, 4, sizeof(char), in);		//data
 	fread(buffer, 4, sizeof(char), in);
-	info->size = (ALsizei) convert_to_int(buffer, 4);
-	info->data = (ALvoid*) malloc(info->size * sizeof(char));
-	fread(info->data, info->size, sizeof(char), in);
+	info->size = (ALsizei) convert_to_int(buffer, 4);	//This isn't the true size
+
+	if(info->play_type != AL_AS_TYPE_STREAM){
+		info->data = (ALvoid*) malloc(info->size * sizeof(char));
+		fread(info->data, info->size, sizeof(char), in);
+	}
+	else{
+		info->data = NULL;
+	}
 
 	if(chan == 1){
 		info->format = (bps == 8) ? AL_FORMAT_MONO8 : AL_FORMAT_MONO16;
@@ -118,7 +135,12 @@ ALboolean al_load_WAV_file_info(const char * filename, al_audio_info_t * info, u
 		info->format = (bps == 8) ? AL_FORMAT_STEREO8 : AL_FORMAT_STEREO16;
 	}
 
-	fclose(in);
+	if(info->play_type != AL_AS_TYPE_STREAM){
+		fclose(in);
+	}
+	else{
+		al_streamer_fp = in;		
+	}
 
 	printf("Loaded WAV file!\n");
 
@@ -127,10 +149,18 @@ ALboolean al_load_WAV_file_info(const char * filename, al_audio_info_t * info, u
 
 //Currently unimplemented
 ALboolean al_load_CDDA_track_info(uint8_t track, al_audio_info_t * info, uint8_t mode){
+	if(mode & AL_AS_TYPE_STREAM && (al_streamer_source != NULL || al_streamer_fp != NULL)){
+		return AL_FALSE;
+	}
+
 	return AL_FALSE;
 }
 
-void al_unload_audio_info(al_audio_info_t * info){
+ALboolean al_unload_audio_info(al_audio_info_t * info){
+	if(info == NULL){
+		return AL_FALSE;
+	}
+
 	if(info->data){
 		free(info->data);
 		info->data = NULL;
@@ -144,14 +174,37 @@ void al_unload_audio_info(al_audio_info_t * info){
 	if(info->play_type == AL_AS_TYPE_STREAM){
 		fclose(al_streamer_fp);
 		al_streamer_fp = NULL;
-		al_streamer_info = NULL;
+		al_streamer_source->info = NULL;
+		al_free_audio_source(al_streamer_source);
 	}
+
+	return AL_TRUE;
+}
+
+ALboolean al_free_audio_source(al_audio_source_t * source){
+	if(source == NULL){
+		return AL_FALSE;
+	}
+
+	uint8_t num_buffers = (source->info->play_type == AL_AS_TYPE_STREAM) ? STREAMING_NUM_BUFFERS : 1;
+
+	//1st param is number of buffers
+	alDeleteSources(1, &source->source_id);
+	alDeleteBuffers(num_buffers, source->buffer_id);
+
+	return AL_TRUE;
 }
 
 ALboolean al_create_source(al_audio_source_t * source, al_audio_info_t * info, vec2_f_t position, ALboolean looping,
-	float volume, float speed, uint8_t num_buffers){
-	if(source == NULL || info == NULL || volume < 0 || speed < 0 || num_buffers == 0){
+	float volume, float speed, uint8_t flag){
+
+	if(source == NULL || info == NULL || volume < 0 || speed < 0){
 		return AL_FALSE;
+	}
+
+	if(info->play_type == AL_AS_TYPE_STREAM){
+		if(al_streamer_source != NULL){return AL_FALSE;}
+		al_streamer_source = source;
 	}
 
 	source->info = info;
@@ -159,7 +212,6 @@ ALboolean al_create_source(al_audio_source_t * source, al_audio_info_t * info, v
 	source->looping = looping;	//0 or 1
 	source->volume = volume;
 	source->speed = speed;
-	source->num_buffers = num_buffers;
 
 	ALCenum error;
 
@@ -204,26 +256,29 @@ ALboolean al_create_source(al_audio_source_t * source, al_audio_info_t * info, v
 		AL_SOURCE_STATE
 	*/
 
-	// source->buffer_id	//This one's a pointer
-	// source->source_state
+	//1 buffer normally, but "STREAMING_NUM_BUFFERS" for streaming
+	uint8_t num_buffers = (info->play_type == AL_AS_TYPE_STREAM) ? STREAMING_NUM_BUFFERS : 1;
 
 	//Generate the buffers
 	source->buffer_id = malloc(sizeof(ALuint) * num_buffers);
 	alGenBuffers(num_buffers, source->buffer_id);	//Generating "num_buffers" buffer. 2nd param is a pointer to an array
-												//of ALuint values which will store the names of the new buffers
-												//Seems "buffer" is just an ID and doesn't actually contain the data?
+													//of ALuint values which will store the names of the new buffers
+													//Seems "buffer" is just an ID and doesn't actually contain the data?
 	if(al_test_error(&error, "buffer generation") == AL_TRUE){return AL_FALSE;}
 
-	alBufferData(source->buffer_id[0], info->format, info->data, info->size, info->freq);	//Fill the buffer with PCM data
-	if(al_test_error(&error, "buffer copy") == AL_TRUE){return AL_FALSE;}
+	if(info->play_type == AL_AS_TYPE_NON_STREAM){
+		alBufferData(source->buffer_id[0], info->format, info->data, info->size, info->freq);	//Fill the buffer with PCM data
+		if(al_test_error(&error, "buffer copy") == AL_TRUE){return AL_FALSE;}
 
-	if(1){
+		alSourcei(source->source_id, AL_BUFFER, source->buffer_id[0]);
+		if(al_test_error(&error, "buffer binding") == AL_TRUE){return AL_FALSE;}
+	}
+
+	//Fix this condition later
+	if(info->data != NULL){
 		free(info->data);	//Its no longer required
 		info->data = NULL;
 	}
-
-	alSourcei(source->source_id, AL_BUFFER, source->buffer_id[0]);
-	if(al_test_error(&error, "buffer binding") == AL_TRUE){return AL_FALSE;}
 
 	return AL_TRUE;
 }
@@ -238,6 +293,150 @@ ALboolean al_update_source_state(al_audio_source_t * source){
 	if(al_test_error(&error, "source state get") == AL_TRUE){return AL_FALSE;}
 
 	return AL_TRUE;
+}
+
+ALboolean al_play_source(al_audio_source_t * source){
+	if(source == NULL){
+		return AL_FALSE;
+	}
+
+	ALCenum error;
+	alSourcePlay(source->source_id);	//If called on a source that is already playing, it will restart from the beginning	
+	if(al_test_error(&error, "source playing") == AL_TRUE){return AL_FALSE;}
+
+	return AL_TRUE;
+}
+
+ALboolean al_pause_source(al_audio_source_t * source){
+	if(source == NULL){
+		return AL_FALSE;
+	}
+
+	ALCenum error;
+	alSourcePause(source->source_id);	//If called on a source that is already playing, it will restart from the beginning	
+	if(al_test_error(&error, "source pausing") == AL_TRUE){return AL_FALSE;}
+
+	return AL_TRUE;
+}
+
+ALboolean al_stop_source(al_audio_source_t * source){
+	if(source == NULL){
+		return AL_FALSE;
+	}
+
+	ALCenum error;
+	alSourceStop(source->source_id);	//If called on a source that is already playing, it will restart from the beginning	
+	if(al_test_error(&error, "source stopping") == AL_TRUE){return AL_FALSE;}
+
+	return AL_TRUE;
+}
+
+ALboolean al_prep_stream_buffers(){
+	ALvoid * data;
+
+	uint8_t i;
+	// Fill all the buffers with audio data from the wave file
+	for (i = 0; i < STREAMING_NUM_BUFFERS; i++)
+	{
+		data = malloc(AL_AS_STREAMING_DATA_CHUNK_SIZE);	//This data is empty
+		al_WAVE_buffer_fill(data);	//Then its filled
+		alBufferData(al_streamer_source->buffer_id[i], al_streamer_source->info->format, data, AL_AS_STREAMING_DATA_CHUNK_SIZE, al_streamer_source->info->freq);
+		free(data);
+		alSourceQueueBuffers(al_streamer_source->source_id, 1, &al_streamer_source->buffer_id[i]);
+	}
+
+	ALCenum error;
+	if(al_test_error(&error, "loading wav file") == AL_TRUE){return AL_FALSE;}
+	return AL_TRUE;
+}
+
+// int8_t al_prep_stream_buffers(ALuint source, ALuint * buffer, uint8_t num_buffers, ALsizei freq, ALenum format){
+// 	ALvoid *data;
+
+// 	int i;
+// 	// Fill all the buffers with audio data from the wave file
+// 	for (i = 0; i < num_buffers; i++)
+// 	{
+// 		data = malloc(DATA_CHUNK_SIZE);	//This data is empty
+// 		WAVE_buffer(data);	//Then its filled
+// 		alBufferData(buffer[i], format, data, DATA_CHUNK_SIZE, freq);
+// 		free(data);
+// 		alSourceQueueBuffers(source, 1, &buffer[i]);
+// 	}
+// 	TEST_ERROR("loading wav file");
+
+// 	return 0;
+// }
+
+uint8_t al_stream_player(){
+	ALint source_state;
+ 	ALvoid *data;
+
+	ALint iBuffersProcessed;
+	ALint iTotalBuffersProcessed;
+	ALuint uiBuffer;
+	// Buffer queuing loop must operate in a new thread
+	iBuffersProcessed = 0;
+
+	if(al_play_source(al_streamer_source) == AL_FALSE){return 1;}
+
+	// while (1)
+	// {
+		if(al_update_source_state(al_streamer_source) == AL_FALSE){return 2;}
+		while (source_state == AL_PLAYING)	//How is the state changing?
+		// while (1)	//This works
+		{
+			alGetSourcei(al_streamer_source->source_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);	//Is this call required?
+
+			// Buffer queuing loop must operate in a new thread
+			iBuffersProcessed = 0;
+			alGetSourcei(al_streamer_source->source_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
+
+			iTotalBuffersProcessed += iBuffersProcessed;	//Is that var required?
+
+			// For each processed buffer, remove it from the source queue, read the next chunk of
+			// audio data from the file, fill the buffer with new data, and add it to the source queue
+			while (iBuffersProcessed)
+			{
+				// Remove the buffer from the queue (uiBuffer contains the buffer ID for the dequeued buffer)
+				uiBuffer = 0;
+				alSourceUnqueueBuffers(al_streamer_source->source_id, 1, &uiBuffer);
+
+				// Read more pData audio data (if there is any)
+				data = malloc(AL_AS_STREAMING_DATA_CHUNK_SIZE);
+				al_WAVE_buffer_fill(data);
+				// Copy audio data to buffer
+				alBufferData(uiBuffer, al_streamer_source->info->format, data, AL_AS_STREAMING_DATA_CHUNK_SIZE, al_streamer_source->info->freq);
+				free(data);
+				// Insert the audio buffer to the source queue
+				alSourceQueueBuffers(al_streamer_source->source_id, 1, &uiBuffer);
+
+				iBuffersProcessed--;
+			}
+
+			if(al_update_source_state(al_streamer_source) == AL_FALSE){return 3;}
+			thd_pass();	//Not entirely sure what this does
+		}
+	// }
+
+	// fclose(in);
+
+	//Should I then reset the buffers?
+
+	return 0;	//How is it getting here?
+}
+
+void al_WAVE_buffer_fill(ALvoid * data){
+	int spare = al_streamer_source->info->size - ftell(al_streamer_fp);
+	int read = fread(data, 1, MIN(AL_AS_STREAMING_DATA_CHUNK_SIZE, spare), al_streamer_fp);
+	// printf("Reading WAV: read: %d spare:%d\n", read, spare);
+	if (read < AL_AS_STREAMING_DATA_CHUNK_SIZE)
+	{
+		fseek(al_streamer_fp, WAV_HDR_SIZE, SEEK_SET);
+		// printf("Writing silence\n");
+		// memset(&((char *)data)[read], 0, AL_AS_STREAMING_DATA_CHUNK_SIZE - read);	//This sets the remainder of the buffer to zero. Use if not looping
+		fread(&((char*)data)[read], AL_AS_STREAMING_DATA_CHUNK_SIZE - read, 1, al_streamer_fp);	//Fills with beginning. Use if looping
+	}
 }
 
 
@@ -257,7 +456,7 @@ uint8_t al_adjust_source_volume(al_audio_source_t * source, float vol){
 	if(vol < 0 || source == NULL){return 1;}
 
 	ALCenum error;
-	alSourcefi(source->source_id, AL_GAIN, vol);
+	alSourcef(source->source_id, AL_GAIN, vol);
 	if(al_test_error(&error, "source gain") == AL_TRUE){return 1;}
 	return 0;
 }
@@ -266,8 +465,17 @@ uint8_t al_adjust_source_speed(al_audio_source_t * source, float speed){
 	if(speed < 0 || source == NULL){return 1;}
 
 	ALCenum error;
-	alSourcefi(source->source_id, AL_PITCH, speed);
+	alSourcef(source->source_id, AL_PITCH, speed);
 	if(al_test_error(&error, "source pitch") == AL_TRUE){return 1;}
+	return 0;
+}
+
+uint8_t al_set_source_looping(al_audio_source_t * source, ALboolean looping){
+	if(source == NULL){return 1;}
+
+	ALCenum error;
+	alSourcei(source->source_id, AL_LOOPING, looping);
+	if(al_test_error(&error, "source looping") == AL_TRUE){return AL_FALSE;}
 	return 0;
 }
 
@@ -286,7 +494,7 @@ ALboolean al_test_error(ALCenum * error, char * msg){
 	return AL_FALSE;
 }
 
-void list_audio_devices(const ALCchar *devices){
+void al_list_audio_devices(const ALCchar *devices){
 	const ALCchar *device = devices, *next = devices + 1;
 	size_t len = 0;
 
@@ -344,15 +552,3 @@ int convert_to_int(char * buffer, int len){
 	}
 	return a;
 }
-
-// void WAVE_buffer(void *data){
-	// int spare = WAV_size - ftell(in);
-	// int read = fread(data, 1, MIN(DATA_CHUNK_SIZE, spare), in);
-	// printf("Reading WAV: read: %d spare:%d\n", read, spare);
-	// if(read < DATA_CHUNK_SIZE){
-	// 	printf("Writing silence\n");
-	// 	fseek(in, WAV_data_start, SEEK_SET);
-	// 	memset(&((char *)data)[read], 0, DATA_CHUNK_SIZE - read);
-	// 	//fread(&((char*)data)[read], DATA_CHUNK_SIZE-read, 1, in);
-	// }
-// }

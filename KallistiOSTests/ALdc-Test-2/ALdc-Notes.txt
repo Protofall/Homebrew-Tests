@@ -40,6 +40,8 @@ Nm, the file pointer is a global and for both calls its closed at later points. 
 - Seems in OpenAL gain is sound and master volume is set by the listener https://stackoverflow.com/questions/3814564/how-to-adjust-the-volume-of-a-sound-in-openal
 - Playback speed is controlled by the pitch alSourcef(source, AL_PITCH, 0.5f); //Half speed
 
+- When submitting PR, make sure to add "free(data)" calls
+- Seems you should still update position and velocity per frame? I think velocity is used inbetween frames to estimate and make it sound smoother?
 
 QUESTIONS:
 - what exactly is a "buffer". I think the variable we are using is just a number/id, but it seems to point to a buffer in memory. Is this in RAM or Sound RAM?
@@ -50,3 +52,4 @@ QUESTIONS:
 
 IDEAS:
 If I can't find a proper way to adjust volume, I can just move the source closer/away from the listener
+Look into "libaudio" later on for CDDA, OGG and better WAV support

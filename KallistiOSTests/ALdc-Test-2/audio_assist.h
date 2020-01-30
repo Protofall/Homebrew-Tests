@@ -21,7 +21,7 @@ typedef struct al_audio_info{
 	uint8_t is_cdda;
 	char * path;	//NULL if CDDA
 
-	ALvoid * data;
+	ALvoid * data;	//Is NULL when in streaming mode or when the user decides to free it up
 	ALsizei size, freq;
 	ALenum format;
 } al_audio_info_t;
@@ -40,7 +40,7 @@ typedef struct al_audio_source{
 	float speed;	//Pitch
 
 	uint8_t num_buffers;
-	ALuint * buffer_id;	//Each source can use 1 or more buffers
+	ALuint * buffer_id;	//Each source can use 1 or more buffers (Hard-code streaming to use 4 buffers, else only 1?)
 	ALuint source_id;	//The source it uses
 	ALint source_state;
 } al_audio_source_t;
@@ -50,10 +50,15 @@ ALCdevice * al_device;
 
 //Since it only makes sense to stream one audio source (The music). I'be hard coded it to only use one
 FILE * al_streamer_fp;	//If a pointer to the file/data on disc
-al_audio_info_t * al_streamer_info;	//Is null if none are streaming, otherwise points to the streaming struct
-// al_audio_source_t * al_streamer_sound;
+al_audio_source_t * al_streamer_source;	//Is null if none are streaming, otherwise points to the streaming struct
+										//And this contains a pointer to the info struct
 
-// void WAVE_buffer(void *data);
+al_audio_source_t * al_streamer_info;	//UNUSED (Might keep or delete later)
+
+#define STREAMING_NUM_BUFFERS 4
+#define AL_AS_STREAMING_DATA_CHUNK_SIZE (1024 * 64)
+#define WAV_HDR_SIZE 44
+// static int WAV_size;	//Set when info is created
 
 #define AL_AS_STORE_NO_DATA (0 << 1)
 #define AL_AS_STORE_DATA (1 << 1)
@@ -70,18 +75,29 @@ void al_shutdown();
 ALboolean al_load_WAV_file_info(const char * path, al_audio_info_t * info, uint8_t mode);	//Mode is stream/local and storing data
 ALboolean al_load_CDDA_track_info(uint8_t track, al_audio_info_t * info, uint8_t mode);	//Data is never stored if in stream mode
 
-void al_unload_audio_info(al_audio_info_t * info);	//This will free path and data if needed
+ALboolean al_unload_audio_info(al_audio_info_t * info);	//This will free path and data if needed
+ALboolean al_free_audio_source(al_audio_source_t * source);
 
 ALboolean al_create_source(al_audio_source_t * source, al_audio_info_t * info, vec2_f_t position, ALboolean looping,
-	float volume, float speed, uint8_t num_buffers);
+	float volume, float speed, uint8_t flag);
 
 ALboolean al_update_source_state(al_audio_source_t * source);
+
+ALboolean al_play_source(al_audio_source_t * source);
+ALboolean al_pause_source(al_audio_source_t * source);
+ALboolean al_stop_source(al_audio_source_t * source);
+
+ALboolean al_prep_stream_buffers();
+uint8_t al_stream_player();
+
+void al_WAVE_buffer_fill(ALvoid * data);
 
 //----------------------ADJUSTMENT---------------------//
 
 uint8_t al_adjust_master_volume(float vol);	//adjust's listener's gain
 uint8_t al_adjust_source_volume(al_audio_source_t * source, float vol);	//adjust's source's gain
 uint8_t al_adjust_source_speed(al_audio_source_t * source, float speed);
+uint8_t al_set_source_looping(al_audio_source_t * source, ALboolean looping);
 
 
 //----------------------MISC---------------------------//
@@ -91,7 +107,7 @@ uint8_t al_adjust_source_speed(al_audio_source_t * source, float speed);
 
 ALboolean al_test_error(ALCenum * error, char * msg);
 
-void list_audio_devices(const ALCchar *devices);
+void al_list_audio_devices(const ALCchar *devices);
 
 inline ALenum to_al_format(short channels, short samples);	//Unused
 
