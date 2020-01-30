@@ -31,43 +31,29 @@ int main(int argc, char **argv){
 	#endif
 	if(al_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
-	if(al_create_source(&sourceFX, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 1, 1, 0) == AL_FALSE){return -1;}
+	if(al_create_source(&sourceFX, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1) == AL_FALSE){return -1;}
 
 	//Setup music
+	// #ifdef _arch_dreamcast
+	// 	if(al_load_WAV_file_info("/rd/file_1.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
+	// #else
+	// 	if(al_load_WAV_file_info("file_1.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
+	// #endif
 	#ifdef _arch_dreamcast
-		if(al_load_WAV_file_info("/rd/file_1.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
+		if(al_load_WAV_file_info("/cd/best.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
 	#else
-		if(al_load_WAV_file_info("file_1.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
+		if(al_load_WAV_file_info("best.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
 	#endif
 	if(al_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
-	if(al_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_TRUE, 1, 1, 1) == AL_FALSE){return -1;}
+	if(al_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_TRUE, 1, 1) == AL_FALSE){return -1;}
 
 	//Play the sound effect
-	// if(al_play_source(&sourceFX) == AL_FALSE){return -1;}
-
-	// if(al_prep_stream_buffers() == AL_FALSE){return -1;}
-
-	// if(al_update_source_state(&sourceFX) == AL_FALSE){return -1;}
-
-	// while(sourceFX.source_state == AL_PLAYING){
-	// 	if(al_update_source_state(&sourceFX) == AL_FALSE){return -1;}
-	// 	thd_pass();
-	// }
+	if(al_play_source(&sourceFX) == AL_FALSE){return -1;}
 
 	// Play the music (Later make this a seperate thread)
 	if(al_prep_stream_buffers() == AL_FALSE){return -1;}
-	uint8_t res = al_stream_player();
-	if(res == 0){while(1){;}}
-
-	if(al_play_source(&sourceFX) == AL_FALSE){return -1;}
-
-	if(al_update_source_state(&sourceFX) == AL_FALSE){return -1;}
-
-	while(sourceFX.source_state == AL_PLAYING){
-		if(al_update_source_state(&sourceFX) == AL_FALSE){return -1;}
-		thd_pass();
-	}
+	al_stream_player();
 
 	al_stop_source(&sourceFX);
 	al_stop_source(&sourceMusic);

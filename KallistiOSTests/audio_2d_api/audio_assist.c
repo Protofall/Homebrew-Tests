@@ -196,7 +196,7 @@ ALboolean al_free_audio_source(al_audio_source_t * source){
 }
 
 ALboolean al_create_source(al_audio_source_t * source, al_audio_info_t * info, vec2_f_t position, ALboolean looping,
-	float volume, float speed, uint8_t flag){
+	float volume, float speed){
 
 	if(source == NULL || info == NULL || volume < 0 || speed < 0){
 		return AL_FALSE;
@@ -350,26 +350,7 @@ ALboolean al_prep_stream_buffers(){
 	return AL_TRUE;
 }
 
-// int8_t al_prep_stream_buffers(ALuint source, ALuint * buffer, uint8_t num_buffers, ALsizei freq, ALenum format){
-// 	ALvoid *data;
-
-// 	int i;
-// 	// Fill all the buffers with audio data from the wave file
-// 	for (i = 0; i < num_buffers; i++)
-// 	{
-// 		data = malloc(DATA_CHUNK_SIZE);	//This data is empty
-// 		WAVE_buffer(data);	//Then its filled
-// 		alBufferData(buffer[i], format, data, DATA_CHUNK_SIZE, freq);
-// 		free(data);
-// 		alSourceQueueBuffers(source, 1, &buffer[i]);
-// 	}
-// 	TEST_ERROR("loading wav file");
-
-// 	return 0;
-// }
-
-uint8_t al_stream_player(){
-	ALint source_state;
+int8_t al_stream_player(){
  	ALvoid *data;
 
 	ALint iBuffersProcessed;
@@ -383,9 +364,7 @@ uint8_t al_stream_player(){
 	// while (1)
 	// {
 		if(al_update_source_state(al_streamer_source) == AL_FALSE){return 2;}
-		while (source_state == AL_PLAYING)	//How is the state changing?
-		// while (1)	//This works
-		{
+		while (al_streamer_source->source_state != AL_STOPPED){	//This allows us to pause it later
 			alGetSourcei(al_streamer_source->source_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);	//Is this call required?
 
 			// Buffer queuing loop must operate in a new thread
@@ -415,9 +394,23 @@ uint8_t al_stream_player(){
 			}
 
 			if(al_update_source_state(al_streamer_source) == AL_FALSE){return 3;}
-			thd_pass();	//Not entirely sure what this does
+			
+			//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
+			//we should process them
+			#ifdef _arch_dreamcast
+				thd_pass();
+			#endif
+			#ifdef _arch_unix
+				sched_yield();
+			#endif
+			#ifdef _arch_windows
+				sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
+							//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
+			#endif
 		}
 	// }
+
+	// if(al_stop_source(al_streamer_source) == AL_FALSE){return 4;}
 
 	// fclose(in);
 

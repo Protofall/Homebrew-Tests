@@ -10,6 +10,10 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+#ifdef _arch_unix
+	#include <sched.h>
+#endif
+
 #include <AL/al.h>
 #include <AL/alc.h>
 
@@ -79,7 +83,7 @@ ALboolean al_unload_audio_info(al_audio_info_t * info);	//This will free path an
 ALboolean al_free_audio_source(al_audio_source_t * source);
 
 ALboolean al_create_source(al_audio_source_t * source, al_audio_info_t * info, vec2_f_t position, ALboolean looping,
-	float volume, float speed, uint8_t flag);
+	float volume, float speed);
 
 ALboolean al_update_source_state(al_audio_source_t * source);
 
@@ -88,7 +92,7 @@ ALboolean al_pause_source(al_audio_source_t * source);
 ALboolean al_stop_source(al_audio_source_t * source);
 
 ALboolean al_prep_stream_buffers();
-uint8_t al_stream_player();
+int8_t al_stream_player();
 
 void al_WAVE_buffer_fill(ALvoid * data);
 
