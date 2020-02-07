@@ -53,11 +53,19 @@ int main(int argc, char **argv){
 	if(audio_play_source(&sourceFX) == AL_FALSE){return -1;}
 
 	// Play the music (Later make this a seperate thread)
-	if(al_prep_stream_buffers() == AL_FALSE){return -1;}
-	al_stream_player();
+	// al_stream_player();
+	if(audio_play_source(&sourceMusic) == AL_FALSE){return -1;}	//This and al_create_source will handle the above command
+
+	//So the program continues forever
+	while(1){
+		;
+	}
 
 	audio_stop_source(&sourceFX);
 	audio_stop_source(&sourceMusic);
+
+	al_free_audio_source(&sourceMusic);
+	al_unload_audio_info(&infoMusic);
 
 	al_free_audio_source(&sourceFX);
 	al_unload_audio_info(&infoFX);

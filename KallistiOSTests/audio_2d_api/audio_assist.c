@@ -54,6 +54,9 @@ uint8_t audio_init(){
 		return 1;
 	}
 
+	audio_streamer_command = AUDIO_COMMAND_NONE;
+	audio_streamer_thd_active = 0;
+
 	return 0;
 }
 
@@ -302,8 +305,19 @@ ALboolean audio_play_source(audio_source_t * source){
 	if(source == NULL){return AL_FALSE;}
 
 	ALCenum error;
+	ALboolean ret_val;
 	if(source == audio_streamer_source){
-		audio_streamer_command = AUDIO_COMMAND_PLAY;
+		pthread_mutex_lock(&audio_streamer_lock);
+		if(audio_streamer_thd_active == 1){
+			if(audio_streamer_command == AUDIO_COMMAND_NONE){
+				audio_streamer_command = AUDIO_COMMAND_PLAY;
+				ret_val = AL_TRUE;
+			}
+			else{ret_val = AL_FALSE;}
+		}
+		else{ret_val = AL_FALSE;}	//This should never occur
+		pthread_mutex_unlock(&audio_streamer_lock);
+		return ret_val;
 	}
 	else{
 		alSourcePlay(source->source_id);	//If called on a source that is already playing, it will restart from the beginning	
@@ -312,36 +326,60 @@ ALboolean audio_play_source(audio_source_t * source){
 	return AL_TRUE;
 }
 
-//DONE? (Can't say for sure if that'll work)
 ALboolean audio_pause_source(audio_source_t * source){
 	if(source == NULL){return AL_FALSE;}
 
 	ALCenum error;
+	ALboolean ret_val;
 	if(source == audio_streamer_source){
-		if(source->source_state == AL_PAUSED){
-			return AL_FALSE;
+		pthread_mutex_lock(&audio_streamer_lock);
+		if(audio_streamer_thd_active == 1 && audio_streamer_command == AUDIO_COMMAND_NONE){
+			ret_val = AL_TRUE;
 		}
-		else{
+		else{ret_val = AL_FALSE;}
+
+		//Should checking the source state be out of the mutex lock?
+		al_update_source_state(source);
+		if(source->source_state != AL_PLAYING){
+			ret_val = AL_FALSE;
+		}
+
+		if(ret_val == AL_TRUE){
 			audio_streamer_command = AUDIO_COMMAND_PAUSE;
 		}
+
+		pthread_mutex_unlock(&audio_streamer_lock);
+		return ret_val;
 	}
 	alSourcePause(source->source_id);
 	if(al_test_error(&error, "source pausing") == AL_TRUE){return AL_FALSE;}
 	return AL_TRUE;
 }
 
-//DONE
 ALboolean audio_unpause_source(audio_source_t * source){
 	if(source == NULL){return AL_FALSE;}
 
 	ALCenum error;
+	ALboolean ret_val;
 	if(source == audio_streamer_source){
-		if(source->source_state != AL_PAUSED){
-			return AL_FALSE;
+		pthread_mutex_lock(&audio_streamer_lock);
+		if(audio_streamer_thd_active == 1 && audio_streamer_command == AUDIO_COMMAND_NONE){
+			ret_val = AL_TRUE;
 		}
-		else{
+		else{ret_val = AL_FALSE;}
+
+		//Should checking the source state be out of the mutex lock?
+		al_update_source_state(source);
+		if(source->source_state != AL_PAUSED){
+			ret_val = AL_FALSE;
+		}
+
+		if(ret_val == AL_TRUE){
 			audio_streamer_command = AUDIO_COMMAND_UNPAUSE;
 		}
+
+		pthread_mutex_unlock(&audio_streamer_lock);
+		return ret_val;
 	}
 
 	alSourcePlay(source->source_id);
@@ -353,8 +391,19 @@ ALboolean audio_stop_source(audio_source_t * source){
 	if(source == NULL){return AL_FALSE;}
 
 	ALCenum error;
+	ALboolean ret_val;
 	if(source == audio_streamer_source){
-		audio_streamer_command = AUDIO_COMMAND_STOP;
+		pthread_mutex_lock(&audio_streamer_lock);
+		if(audio_streamer_thd_active == 1){
+			if(audio_streamer_command == AUDIO_COMMAND_NONE){
+				audio_streamer_command = AUDIO_COMMAND_STOP;
+				ret_val = AL_TRUE;
+			}
+			else{ret_val = AL_FALSE;}
+		}
+		else{ret_val = AL_FALSE;}	//This should never occur
+		pthread_mutex_unlock(&audio_streamer_lock);
+		return ret_val;
 	}
 	else{
 		alSourceStop(source->source_id);
@@ -383,6 +432,8 @@ ALboolean al_prep_stream_buffers(){
 }
 
 int8_t al_stream_player(){
+	if(al_prep_stream_buffers() == AL_FALSE){return 1;}
+
  	ALvoid *data;
 
 	ALint iBuffersProcessed;

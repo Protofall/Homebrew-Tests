@@ -69,7 +69,7 @@ audio_info_t * audio_streamer_info;
 #define AUDIO_COMMAND_PAUSE 2
 #define AUDIO_COMMAND_UNPAUSE 3
 #define AUDIO_COMMAND_STOP 4
-// #define AUDIO_COMMAND_END 5	//This will terminate the streamer thread
+#define AUDIO_COMMAND_END 5	//This will terminate the streamer thread
 
 uint8_t audio_streamer_command;	//Should only be accessed with a mutex
 uint8_t audio_streamer_thd_active;	//Says if the streamer thread is currently active or not
