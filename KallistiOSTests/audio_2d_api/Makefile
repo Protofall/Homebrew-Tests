@@ -11,6 +11,7 @@ LIBS     := $(KOS_LIBS)
 # LDFLAGS += -L$(KOS_PORTS)/ALdc/inst/lib/
 
 #Link the lib like you would with KOS's libpng port
+	#NOTE: We don't add -lpthreads because KOS has its own implementation
 LIBS += -lALdc
 
 #For some reason "-lm" must come after ALdc

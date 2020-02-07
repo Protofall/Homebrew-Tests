@@ -10,32 +10,38 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#ifdef _arch_unix
+#if defined(_arch_unix) || defined(_arch_dreamcast)
 	#include <sched.h>
+	#include <pthread.h>
+#elif defined(_arch_win)
+	#error "Windows not supported due to pthreads"
 #endif
 
 #include <AL/al.h>
 #include <AL/alc.h>
 
-#define AL_AS_TYPE_NON_STREAM (0 << 0)
-#define AL_AS_TYPE_STREAM (1 << 0)
+#define AUDIO_NOT_STREAMING 0
+#define AUDIO_STREAMING 1
 
-typedef struct al_audio_info{
-	uint8_t play_type;	//In RAM or streaming. We can only have one streaming at a time
-	uint8_t is_cdda;
-	char * path;	//NULL if CDDA
+#define AUDIO_DATA_TYPE_WAV 0
+#define AUDIO_DATA_TYPE_CDDA 1
+#define AUDIO_DATA_TYPE_OGG 2
+
+typedef struct audio_info{
+	uint8_t streaming;	//In RAM or streaming. We can only have one streaming at a time
+	uint8_t data_type;
 
 	ALvoid * data;	//Is NULL when in streaming mode or when the user decides to free it up
 	ALsizei size, freq;
 	ALenum format;
-} al_audio_info_t;
+} audio_info_t;
 
 typedef struct vec2_f{
 	float x, y;
 } vec2_f_t;
 
-typedef struct al_audio_source{
-	al_audio_info_t * info;
+typedef struct audio_source{
+	audio_info_t * info;
 	vec2_f_t position;	//Since we are doing 2D we only need two
 						//velocity is always zero
 
@@ -47,49 +53,62 @@ typedef struct al_audio_source{
 	ALuint * buffer_id;	//Each source can use 1 or more buffers (Hard-code streaming to use 4 buffers, else only 1?)
 	ALuint source_id;	//The source it uses
 	ALint source_state;
-} al_audio_source_t;
+} audio_source_t;
 
 ALCcontext * al_context;	//We only need one for all audio
 ALCdevice * al_device;
 
-//Since it only makes sense to stream one audio source (The music). I'be hard coded it to only use one
-FILE * al_streamer_fp;	//If a pointer to the file/data on disc
-al_audio_source_t * al_streamer_source;	//Is null if none are streaming, otherwise points to the streaming struct
+//Since it only makes sense to stream one audio source (The music). I've hard coded it to only use one
+FILE * audio_streamer_fp;	//If a pointer to the file/data on disc
+audio_source_t * audio_streamer_source;	//Is null if none are streaming, otherwise points to the streaming struct
 										//And this contains a pointer to the info struct
+audio_info_t * audio_streamer_info;
 
-al_audio_source_t * al_streamer_info;	//UNUSED (Might keep or delete later)
+#define AUDIO_COMMAND_NONE 0
+#define AUDIO_COMMAND_PLAY 1
+#define AUDIO_COMMAND_PAUSE 2
+#define AUDIO_COMMAND_UNPAUSE 3
+#define AUDIO_COMMAND_STOP 4
+// #define AUDIO_COMMAND_END 5	//This will terminate the streamer thread
 
-#define STREAMING_NUM_BUFFERS 4
-#define AL_AS_STREAMING_DATA_CHUNK_SIZE (1024 * 64)
+uint8_t audio_streamer_command;	//Should only be accessed with a mutex
+uint8_t audio_streamer_thd_active;	//Says if the streamer thread is currently active or not
+pthread_t audio_streamer_thd_id;	//Currently unused
+pthread_mutex_t audio_streamer_lock;	//We lock the streamer command and thd_active vars
+
+#define AUDIO_STREAMING_NUM_BUFFERS 4
+#define AUDIO_STREAMING_DATA_CHUNK_SIZE (1024 * 64)
 #define WAV_HDR_SIZE 44
-// static int WAV_size;	//Set when info is created
 
-#define AL_AS_STORE_NO_DATA (0 << 1)
-#define AL_AS_STORE_DATA (1 << 1)
-#define AL_AS_FREE_DATA (1 << 1)
-
-uint8_t al_init();	//Returns 1 if an error occured, 0 otherwise
-void al_shutdown();
+uint8_t audio_init();	//Returns 1 if an error occured, 0 otherwise
+void audio_shutdown();
 
 //NOTE: I want an option to load a CDDA song into RAM instead of streaming if thats what the user wants
 
-//These load functions will instanly fail if you want to stream and there's another stream one present
-	//Mode = ---- --DS
-	//D = storing data, S = streaming
-ALboolean al_load_WAV_file_info(const char * path, al_audio_info_t * info, uint8_t mode);	//Mode is stream/local and storing data
-ALboolean al_load_CDDA_track_info(uint8_t track, al_audio_info_t * info, uint8_t mode);	//Data is never stored if in stream mode
+//These load functions will instanly fail if you want to stream and there's another streamer present
+ALboolean al_load_WAV_file_info(const char * path, audio_info_t * info, uint8_t mode);	//Mode is stream/local
+ALboolean al_load_CDDA_track_info(uint8_t track, audio_info_t * info, uint8_t mode);	//Data is never stored if in stream mode
 
-ALboolean al_unload_audio_info(al_audio_info_t * info);	//This will free path and data if needed
-ALboolean al_free_audio_source(al_audio_source_t * source);
+ALboolean al_unload_audio_info(audio_info_t * info);	//This will free path and data if they are set
+void al_free_info_data(audio_info_t * info);
+ALboolean al_free_audio_source(audio_source_t * source);
 
-ALboolean al_create_source(al_audio_source_t * source, al_audio_info_t * info, vec2_f_t position, ALboolean looping,
-	float volume, float speed);
+//Note: Despite what option you give the loader, it will never store the data in stream mode
+#define AUDIO_KEEP_DATA 0
+#define AUDIO_FREE_DATA 1
 
-ALboolean al_update_source_state(al_audio_source_t * source);
+// `delete_data` means delete the original data buffer once used. You might not want to do this if you have multiple sources
+// using the same sound file
+ALboolean al_create_source(audio_source_t * source, audio_info_t * info, vec2_f_t position, ALboolean looping,
+	float volume, float speed, uint8_t delete_data);
 
-ALboolean al_play_source(al_audio_source_t * source);
-ALboolean al_pause_source(al_audio_source_t * source);
-ALboolean al_stop_source(al_audio_source_t * source);
+ALboolean al_update_source_state(audio_source_t * source);
+
+ALboolean audio_play_source(audio_source_t * source);	//When called on a source which is already playing, the source will restart at the beginning
+ALboolean audio_pause_source(audio_source_t * source);
+ALboolean audio_unpause_source(audio_source_t * source);	//If pause it will resume from the point it stoped. If not paused this will return false
+ALboolean audio_stop_source(audio_source_t * source);	//Next time we run "play" it will resume from the beginning of the song/sfx
+															//Note: Stopping a streaming source will terminate the `al_stream_player()` call its in
 
 ALboolean al_prep_stream_buffers();
 int8_t al_stream_player();
@@ -99,9 +118,9 @@ void al_WAVE_buffer_fill(ALvoid * data);
 //----------------------ADJUSTMENT---------------------//
 
 uint8_t al_adjust_master_volume(float vol);	//adjust's listener's gain
-uint8_t al_adjust_source_volume(al_audio_source_t * source, float vol);	//adjust's source's gain
-uint8_t al_adjust_source_speed(al_audio_source_t * source, float speed);
-uint8_t al_set_source_looping(al_audio_source_t * source, ALboolean looping);
+uint8_t al_adjust_source_volume(audio_source_t * source, float vol);	//adjust's source's gain
+uint8_t al_adjust_source_speed(audio_source_t * source, float speed);
+uint8_t al_set_source_looping(audio_source_t * source, ALboolean looping);
 
 
 //----------------------MISC---------------------------//

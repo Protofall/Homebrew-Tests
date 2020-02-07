@@ -18,50 +18,51 @@ int main(int argc, char **argv){
 	ALCenum error;
 
 	//Initialise OpenAL and the listener
-	if(al_init() != 0){return -1;}
+	if(audio_init() != 0){return -1;}
 
-	al_audio_info_t infoFX, infoMusic;
-	al_audio_source_t sourceFX, sourceMusic;
+	audio_info_t infoFX, infoMusic;
+	audio_source_t sourceFX, sourceMusic;
 
 	//Setup chopper sound effect
 	#ifdef _arch_dreamcast
-		if(al_load_WAV_file_info("/rd/test.wav", &infoFX, AL_AS_TYPE_NON_STREAM) == AL_FALSE){return -1;}
+		if(al_load_WAV_file_info("/rd/test.wav", &infoFX, AUDIO_NOT_STREAMING) == AL_FALSE){return -1;}
 	#else
-		if(al_load_WAV_file_info("test.wav", &infoFX, AL_AS_TYPE_NON_STREAM) == AL_FALSE){return -1;}
+		if(al_load_WAV_file_info("test.wav", &infoFX, AUDIO_NOT_STREAMING) == AL_FALSE){return -1;}
 	#endif
 	if(al_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
-	if(al_create_source(&sourceFX, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1) == AL_FALSE){return -1;}
+	if(al_create_source(&sourceFX, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
 
 	//Setup music
 	// #ifdef _arch_dreamcast
-	// 	if(al_load_WAV_file_info("/rd/file_1.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
+	// 	if(al_load_WAV_file_info("/rd/file_1.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
 	// #else
-	// 	if(al_load_WAV_file_info("file_1.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
+	// 	if(al_load_WAV_file_info("file_1.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
 	// #endif
 	#ifdef _arch_dreamcast
-		if(al_load_WAV_file_info("/cd/best.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
+		if(al_load_WAV_file_info("/cd/best.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
 	#else
-		if(al_load_WAV_file_info("best.wav", &infoMusic, AL_AS_TYPE_STREAM) == AL_FALSE){return -1;}
+		if(al_load_WAV_file_info("best.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
 	#endif
 	if(al_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
-	if(al_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_TRUE, 1, 1) == AL_FALSE){return -1;}
+	//Note last param is ignored for streaming
+	if(al_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_FALSE, 0.5, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
 
 	//Play the sound effect
-	if(al_play_source(&sourceFX) == AL_FALSE){return -1;}
+	if(audio_play_source(&sourceFX) == AL_FALSE){return -1;}
 
 	// Play the music (Later make this a seperate thread)
 	if(al_prep_stream_buffers() == AL_FALSE){return -1;}
 	al_stream_player();
 
-	al_stop_source(&sourceFX);
-	al_stop_source(&sourceMusic);
+	audio_stop_source(&sourceFX);
+	audio_stop_source(&sourceMusic);
 
 	al_free_audio_source(&sourceFX);
 	al_unload_audio_info(&infoFX);
 
-	al_shutdown();
+	audio_shutdown();
 
 	return 0;
 }
