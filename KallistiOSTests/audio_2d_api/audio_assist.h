@@ -111,15 +111,15 @@ ALboolean audio_stop_source(audio_source_t * source);	//Next time we run "play" 
 															//Note: Stopping a streaming source will terminate the `audio_stream_player()` call its in
 
 ALboolean audio_prep_stream_buffers();
-int8_t audio_stream_player();
+void * audio_stream_player(void * args);
 
 void audio_WAVE_buffer_fill(ALvoid * data);
 
 //----------------------ADJUSTMENT---------------------//
 
-uint8_t audio_adjustmaster_volume(float vol);	//adjust's listener's gain
-uint8_t audio_adjustsource_volume(audio_source_t * source, float vol);	//adjust's source's gain
-uint8_t audio_adjustsource_speed(audio_source_t * source, float speed);
+uint8_t audio_adjust_master_volume(float vol);	//adjust's listener's gain
+uint8_t audio_adjust_source_volume(audio_source_t * source, float vol);	//adjust's source's gain
+uint8_t audio_adjust_source_speed(audio_source_t * source, float speed);
 uint8_t audio_set_source_looping(audio_source_t * source, ALboolean looping);
 
 

@@ -145,8 +145,6 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 	}
 	else{
 		audio_streamer_fp = in;
-		// if(audio_prep_stream_buffers() == AL_FALSE){return AL_FALSE;}
-		// audio_stream_player();
 	}
 
 	printf("Loaded WAV file!\n");
@@ -199,6 +197,19 @@ ALboolean audio_free_source(audio_source_t * source){
 	alDeleteSources(1, &source->source_id);
 	alDeleteBuffers(num_buffers, source->buffer_id);	//1st param is number of buffers
 
+	//So we can later know there isn't a streamer presents
+	if(source == audio_streamer_source){
+		pthread_mutex_lock(&audio_streamer_lock);
+		if(audio_streamer_thd_active == 1){
+			audio_streamer_command = AUDIO_COMMAND_END;	//Doesn't matter what we said before, we want it to terminate now
+		}
+		pthread_mutex_unlock(&audio_streamer_lock);
+
+		//NOTE: I could add code to wait for the thread to end, but I think its fine to assume it will end on its own
+
+		audio_streamer_source = NULL;
+	}
+
 	return AL_TRUE;
 }
 
@@ -211,6 +222,14 @@ ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2
 
 	if(info->streaming == AUDIO_STREAMING){
 		if(audio_streamer_source != NULL){return AL_FALSE;}
+
+		pthread_mutex_lock(&audio_streamer_lock);
+		if(audio_streamer_thd_active == 1){	//There's already a streamer thread
+			pthread_mutex_unlock(&audio_streamer_lock);
+			return AL_FALSE;
+		}
+		pthread_mutex_unlock(&audio_streamer_lock);
+		
 		audio_streamer_source = source;
 	}
 
@@ -282,6 +301,12 @@ ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2
 
 		if(delete_data){
 			audio_free_info_data(info);
+		}
+	}
+	else{	//We start the streamer thread
+		if(pthread_create(&audio_streamer_thd_id, NULL, audio_stream_player, NULL)){
+			printf("Failed to create streamer thread\n");
+			return AL_FALSE;
 		}
 	}
 
@@ -430,8 +455,15 @@ ALboolean audio_prep_stream_buffers(){
 	return AL_TRUE;
 }
 
-int8_t audio_stream_player(){
-	if(audio_prep_stream_buffers() == AL_FALSE){return 1;}
+//Need to fix returns to unalloc memory if need be
+//I won't be checking the return type so it doesn't matter
+void * audio_stream_player(void * args){
+	//Rework everything below
+	while(1){
+		;
+	}
+
+	if(audio_prep_stream_buffers() == AL_FALSE){return NULL;}
 
  	ALvoid *data;
 
@@ -441,7 +473,7 @@ int8_t audio_stream_player(){
 	// Buffer queuing loop must operate in a new thread
 	iBuffersProcessed = 0;
 
-	if(audio_play_source(audio_streamer_source) == AL_FALSE){return 1;}
+	if(audio_play_source(audio_streamer_source) == AL_FALSE){return NULL;}
 
 	while (1)
 	{
@@ -461,7 +493,7 @@ int8_t audio_stream_player(){
 
 		//Normally when the attached buffers are done playing, the source will progress to the stopped state
 
-		if(audio_update_source_state(audio_streamer_source) == AL_FALSE){return 2;}
+		if(audio_update_source_state(audio_streamer_source) == AL_FALSE){return NULL;}
 		// while(audio_streamer_source->source_state != AL_STOPPED){	//This allows us to pause it later
 		while(audio_streamer_source->source_state == AL_PLAYING){
 			//Process any command it might have been given
@@ -497,7 +529,7 @@ int8_t audio_stream_player(){
 				iBuffersProcessed--;
 			}
 
-			if(audio_update_source_state(audio_streamer_source) == AL_FALSE){return 3;}
+			if(audio_update_source_state(audio_streamer_source) == AL_FALSE){return NULL;}
 			
 			//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
 			//we should process them
@@ -540,7 +572,7 @@ void audio_WAVE_buffer_fill(ALvoid * data){
 //----------------------ADJUSTMENT---------------------//
 
 
-uint8_t audio_adjustmaster_volume(float vol){
+uint8_t audio_adjust_master_volume(float vol){
 	if(vol < 0){return 1;}
 
 	ALCenum error;
@@ -549,7 +581,7 @@ uint8_t audio_adjustmaster_volume(float vol){
 	return 0;
 }
 
-uint8_t audio_adjustsource_volume(audio_source_t * source, float vol){
+uint8_t audio_adjust_source_volume(audio_source_t * source, float vol){
 	if(vol < 0 || source == NULL){return 1;}
 
 	ALCenum error;
@@ -558,7 +590,7 @@ uint8_t audio_adjustsource_volume(audio_source_t * source, float vol){
 	return 0;
 }
 
-uint8_t audio_adjustsource_speed(audio_source_t * source, float speed){
+uint8_t audio_adjust_source_speed(audio_source_t * source, float speed){
 	if(speed < 0 || source == NULL){return 1;}
 
 	ALCenum error;
