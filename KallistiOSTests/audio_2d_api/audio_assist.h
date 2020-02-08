@@ -86,12 +86,12 @@ void audio_shutdown();
 //NOTE: I want an option to load a CDDA song into RAM instead of streaming if thats what the user wants
 
 //These load functions will instanly fail if you want to stream and there's another streamer present
-ALboolean al_load_WAV_file_info(const char * path, audio_info_t * info, uint8_t mode);	//Mode is stream/local
-ALboolean al_load_CDDA_track_info(uint8_t track, audio_info_t * info, uint8_t mode);	//Data is never stored if in stream mode
+ALboolean audio_load_WAV_file_info(const char * path, audio_info_t * info, uint8_t mode);	//Mode is stream/local
+ALboolean audio_load_CDDA_track_info(uint8_t track, audio_info_t * info, uint8_t mode);	//Data is never stored if in stream mode
 
-ALboolean al_unload_audio_info(audio_info_t * info);	//This will free path and data if they are set
-void al_free_info_data(audio_info_t * info);
-ALboolean al_free_audio_source(audio_source_t * source);
+ALboolean audio_unload_info(audio_info_t * info);	//This will free path and data if they are set
+void audio_free_info_data(audio_info_t * info);
+ALboolean audio_free_source(audio_source_t * source);
 
 //Note: Despite what option you give the loader, it will never store the data in stream mode
 #define AUDIO_KEEP_DATA 0
@@ -99,36 +99,37 @@ ALboolean al_free_audio_source(audio_source_t * source);
 
 // `delete_data` means delete the original data buffer once used. You might not want to do this if you have multiple sources
 // using the same sound file
-ALboolean al_create_source(audio_source_t * source, audio_info_t * info, vec2_f_t position, ALboolean looping,
+ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2_f_t position, ALboolean looping,
 	float volume, float speed, uint8_t delete_data);
 
-ALboolean al_update_source_state(audio_source_t * source);
+ALboolean audio_update_source_state(audio_source_t * source);
 
 ALboolean audio_play_source(audio_source_t * source);	//When called on a source which is already playing, the source will restart at the beginning
 ALboolean audio_pause_source(audio_source_t * source);
 ALboolean audio_unpause_source(audio_source_t * source);	//If pause it will resume from the point it stoped. If not paused this will return false
 ALboolean audio_stop_source(audio_source_t * source);	//Next time we run "play" it will resume from the beginning of the song/sfx
-															//Note: Stopping a streaming source will terminate the `al_stream_player()` call its in
+															//Note: Stopping a streaming source will terminate the `audio_stream_player()` call its in
 
-ALboolean al_prep_stream_buffers();
-int8_t al_stream_player();
+ALboolean audio_prep_stream_buffers();
+int8_t audio_stream_player();
 
-void al_WAVE_buffer_fill(ALvoid * data);
+void audio_WAVE_buffer_fill(ALvoid * data);
 
 //----------------------ADJUSTMENT---------------------//
 
-uint8_t al_adjust_master_volume(float vol);	//adjust's listener's gain
-uint8_t al_adjust_source_volume(audio_source_t * source, float vol);	//adjust's source's gain
-uint8_t al_adjust_source_speed(audio_source_t * source, float speed);
-uint8_t al_set_source_looping(audio_source_t * source, ALboolean looping);
+uint8_t audio_adjustmaster_volume(float vol);	//adjust's listener's gain
+uint8_t audio_adjustsource_volume(audio_source_t * source, float vol);	//adjust's source's gain
+uint8_t audio_adjustsource_speed(audio_source_t * source, float speed);
+uint8_t audio_set_source_looping(audio_source_t * source, ALboolean looping);
 
 
 //----------------------MISC---------------------------//
+//MAYBE MAKE THESE STATIC?
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-ALboolean al_test_error(ALCenum * error, char * msg);
+ALboolean audio_test_error(ALCenum * error, char * msg);
 
 void al_list_audio_devices(const ALCchar *devices);
 
