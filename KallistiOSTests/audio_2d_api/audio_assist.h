@@ -55,14 +55,8 @@ typedef struct audio_source{
 	ALint source_state;
 } audio_source_t;
 
-ALCcontext * al_context;	//We only need one for all audio
-ALCdevice * al_device;
-
-//Since it only makes sense to stream one audio source (The music). I've hard coded it to only use one
-FILE * audio_streamer_fp;	//If a pointer to the file/data on disc
-audio_source_t * audio_streamer_source;	//Is null if none are streaming, otherwise points to the streaming struct
-										//And this contains a pointer to the info struct
-audio_info_t * audio_streamer_info;
+ALCcontext * _al_context;	//We only need one for all audio
+ALCdevice * _al_device;
 
 #define AUDIO_COMMAND_NONE 0
 #define AUDIO_COMMAND_PLAY 1
@@ -71,10 +65,16 @@ audio_info_t * audio_streamer_info;
 #define AUDIO_COMMAND_STOP 4
 #define AUDIO_COMMAND_END 5	//This will terminate the streamer thread
 
-uint8_t audio_streamer_command;	//Should only be accessed with a mutex
-uint8_t audio_streamer_thd_active;	//Says if the streamer thread is currently active or not
-pthread_t audio_streamer_thd_id;	//Currently unused
-pthread_mutex_t audio_streamer_lock;	//We lock the streamer command and thd_active vars
+//Since it only makes sense to stream one audio source (The music). I've hard coded it to only use one
+uint8_t         _audio_streamer_command;	//Should only be accessed with a mutex
+uint8_t         _audio_streamer_thd_active;	//Says if the streamer thread is currently active or not
+pthread_t       _audio_streamer_thd_id;	//Currently unused
+pthread_mutex_t _audio_streamer_lock;	//We lock the streamer command and thd_active vars
+
+FILE *          _audio_streamer_fp;	//If a pointer to the file/data on disc
+audio_source_t* _audio_streamer_source;	//Is null if none are streaming, otherwise points to the streaming struct
+										//And this contains a pointer to the info struct
+audio_info_t*   _audio_streamer_info;
 
 #define AUDIO_STREAMING_NUM_BUFFERS 4
 #define AUDIO_STREAMING_DATA_CHUNK_SIZE (1024 * 64)
@@ -111,9 +111,10 @@ ALboolean audio_stop_source(audio_source_t * source);	//Next time we run "play" 
 															//Note: Stopping a streaming source will terminate the `audio_stream_player()` call its in
 
 ALboolean audio_prep_stream_buffers();
-void * audio_stream_player(void * args);
+void * audio_stream_player(void * args);	//This function is called by a pthread
 
 void audio_WAVE_buffer_fill(ALvoid * data);
+// void audio_CDDA_buffer_fill(ALvoid * data);
 
 //----------------------ADJUSTMENT---------------------//
 

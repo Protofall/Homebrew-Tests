@@ -27,34 +27,26 @@ int main(int argc, char **argv){
 	#ifdef _arch_dreamcast
 		if(audio_load_WAV_file_info("/rd/test.wav", &infoFX, AUDIO_NOT_STREAMING) == AL_FALSE){return -1;}
 	#else
-		if(audio_load_WAV_file_info("test.wav", &infoFX, AUDIO_NOT_STREAMING) == AL_FALSE){return -1;}
+		if(audio_load_WAV_file_info("romdisk/test.wav", &infoFX, AUDIO_NOT_STREAMING) == AL_FALSE){return -1;}
 	#endif
 	if(audio_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
 	if(audio_create_source(&sourceFX, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
 
 	//Setup music
-	// #ifdef _arch_dreamcast
-	// 	if(audio_load_WAV_file_info("/rd/file_1.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
-	// #else
-	// 	if(audio_load_WAV_file_info("file_1.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
-	// #endif
 	#ifdef _arch_dreamcast
-		if(audio_load_WAV_file_info("/cd/best.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
+		if(audio_load_WAV_file_info("/rd/The-Haunted-House.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
 	#else
-		if(audio_load_WAV_file_info("best.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
+		if(audio_load_WAV_file_info("romdisk/The-Haunted-House.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
 	#endif
 	if(audio_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
 	//Note last param is ignored for streaming
 	if(audio_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_FALSE, 0.5, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
 
-	//Play the sound effect
+	//Play the sound effect and music
 	if(audio_play_source(&sourceFX) == AL_FALSE){return -1;}
-
-	// Play the music (Later make this a seperate thread)
-	// al_stream_player();
-	if(audio_play_source(&sourceMusic) == AL_FALSE){return -1;}	//This and al_create_source will handle the above command
+	if(audio_play_source(&sourceMusic) == AL_FALSE){return -1;}
 
 	//So the program continues forever
 	while(1){
