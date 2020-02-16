@@ -60,13 +60,24 @@ uint8_t audio_init(){
 }
 
 void audio_shutdown(){
+	//Just incase it hasn't finished shutting down yet
+	uint8_t status = 0;
+	pthread_mutex_lock(&_audio_streamer_lock);
+	if(_audio_streamer_thd_active == 1){
+		status = 1;
+		_audio_streamer_command = AUDIO_COMMAND_END;
+	}
+	pthread_mutex_unlock(&_audio_streamer_lock);
+	if(status){	//Note, if it has already terminated, then this does nothing
+		pthread_join(_audio_streamer_thd_id, NULL);
+	}
+	pthread_mutex_destroy(&_audio_streamer_lock);
+
 	// al_context = alcGetCurrentContext();	//With only one device/context, this line might not be required
 	// _al_device = alcGetContextsDevice(al_context);
 	alcMakeContextCurrent(NULL);
-	alcDestroyContext(al_context);
+	alcDestroyContext(_al_context);
 	alcCloseDevice(_al_device);
-
-	pthread_mutex_destroy(&_audio_streamer_lock);
 
 	return;
 }
@@ -191,10 +202,8 @@ ALboolean audio_free_source(audio_source_t * source){
 		return AL_FALSE;
 	}
 
-	uint8_t num_buffers = (source->info->streaming == AUDIO_STREAMING) ? AUDIO_STREAMING_NUM_BUFFERS : 1;
-
 	alDeleteSources(1, &source->source_id);
-	alDeleteBuffers(num_buffers, source->buffer_id);	//1st param is number of buffers
+	alDeleteBuffers(source->num_buffers, source->buffer_id);	//1st param is number of buffers
 
 	//So we can later know there isn't a streamer presents
 	if(source == _audio_streamer_source){
@@ -282,13 +291,13 @@ ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2
 	*/
 
 	//1 buffer normally, but "AUDIO_STREAMING_NUM_BUFFERS" for streaming
-	uint8_t num_buffers = (info->streaming == AUDIO_STREAMING) ? AUDIO_STREAMING_NUM_BUFFERS : 1;
+	source->num_buffers = (info->streaming == AUDIO_STREAMING) ? AUDIO_STREAMING_NUM_BUFFERS : 1;
 
 	//Generate the buffers
-	source->buffer_id = malloc(sizeof(ALuint) * num_buffers);
-	alGenBuffers(num_buffers, source->buffer_id);	//Generating "num_buffers" buffer. 2nd param is a pointer to an array
-													//of ALuint values which will store the names of the new buffers
-													//Seems "buffer" is just an ID and doesn't actually contain the data?
+	source->buffer_id = malloc(sizeof(ALuint) * source->num_buffers);
+	alGenBuffers(source->num_buffers, source->buffer_id);	//Generating "source->num_buffers" buffers. 2nd param is a pointer to an array
+															//of ALuint values which will store the names of the new buffers
+															//Seems "buffer" is just an ID and doesn't actually contain the data?
 	if(audio_test_error(&error, "buffer generation") == AL_TRUE){return AL_FALSE;}
 
 	if(info->streaming == AUDIO_NOT_STREAMING){
@@ -346,7 +355,7 @@ ALboolean audio_play_source(audio_source_t * source){
 		}
 		else{ret_val = AL_FALSE;}	//This should never occur
 		pthread_mutex_unlock(&_audio_streamer_lock);
-		// return ret_val;
+		return ret_val;
 	}
 	else{
 		alSourcePlay(source->source_id);	//If called on a source that is already playing, it will restart from the beginning	
@@ -444,12 +453,11 @@ ALboolean audio_stop_source(audio_source_t * source){
 ALboolean audio_prep_stream_buffers(){
 	ALvoid * data;
 
-	uint8_t i;
 	// Fill all the buffers with audio data from the wave file
-	for (i = 0; i < AUDIO_STREAMING_NUM_BUFFERS; i++)
-	{
-		data = malloc(AUDIO_STREAMING_DATA_CHUNK_SIZE);	//This data is empty
-		audio_WAVE_buffer_fill(data);	//Then its filled
+	uint8_t i;
+	for(i = 0; i < _audio_streamer_source->num_buffers; i++){
+		data = malloc(AUDIO_STREAMING_DATA_CHUNK_SIZE);
+		audio_WAVE_buffer_fill(data);	//data array is filled with song info
 		alBufferData(_audio_streamer_source->buffer_id[i], _audio_streamer_source->info->format, data, AUDIO_STREAMING_DATA_CHUNK_SIZE, _audio_streamer_source->info->freq);
 		free(data);
 		alSourceQueueBuffers(_audio_streamer_source->source_id, 1, &_audio_streamer_source->buffer_id[i]);
@@ -467,12 +475,14 @@ void * audio_stream_player(void * args){
 	_audio_streamer_thd_active = 1;
 	pthread_mutex_unlock(&_audio_streamer_lock);
 
+	//Queue up all buffers for the source with the beginning of the song
+	if(audio_prep_stream_buffers() == AL_FALSE){return NULL;}	//Currently only works for WAV files
+
 	//Rework everything below
 	while(1){
 		;
 	}
 
-	if(audio_prep_stream_buffers() == AL_FALSE){return NULL;}
 
  	ALvoid *data;
 
@@ -552,11 +562,13 @@ void * audio_stream_player(void * args){
 		}
 	}
 
-	// if(al_stop_source(_audio_streamer_source) == AL_FALSE){return 4;}
+	//Shutdown the system
+	audio_stop_source(_audio_streamer_source);
+	fclose(_audio_streamer_fp);
 
-	// fclose(_audio_streamer_fp);
-
-	//Should I then reset the buffers?
+	//Free the buffers, but this is done in audio_free_source()
+	// alDeleteSources(1, &source);
+	// alDeleteBuffers(_audio_streamer_source->num_buffers, &_audio_streamer_source->buffer_id[0]);
 
 	pthread_mutex_lock(&_audio_streamer_lock);
 	_audio_streamer_thd_active = 0;
