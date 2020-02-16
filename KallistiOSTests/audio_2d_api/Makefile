@@ -21,7 +21,7 @@ LIBS += -lm -lkosutils
 linux:
 	rm -f $(PROG)
 	gcc -c audio_assist.c -lopenal -lpthread -D_arch_unix
-	gcc -o $(PROG) -lopenal -lpthread -D_arch_unix main.c audio_assist.o audio_assist.h
+	gcc -o $(PROG) -lopenal -lpthread -D_arch_unix main.c audio_assist.o
 
 all: rm-elf $(TARGET)
 
