@@ -17,6 +17,13 @@ LIBS += -lALdc
 #For some reason "-lm" must come after ALdc
 LIBS += -lm -lkosutils
 
+#Compile for linux
+linux:
+	rm -f $(PROG)
+	gcc -c audio_assist.c -lpthread
+	gcc -c main.c -lpthread
+	gcc -o $(PROG) main.o audio_assist.o -lpthread
+
 all: rm-elf $(TARGET)
 
 include $(KOS_BASE)/Makefile.rules
