@@ -134,7 +134,7 @@ ALboolean audio_test_error(ALCenum * error, char * msg);
 
 void al_list_audio_devices(const ALCchar *devices);
 
-inline ALenum to_al_format(short channels, short samples);	//Unused
+// inline ALenum to_al_format(short channels, short samples);	//Unused
 
 bool is_big_endian();
 

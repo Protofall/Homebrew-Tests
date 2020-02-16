@@ -640,9 +640,7 @@ uint8_t audio_set_source_looping(audio_source_t * source, ALboolean looping){
 ALboolean audio_test_error(ALCenum * error, char * msg){
 	*error = alGetError();
 	if(*error != AL_NO_ERROR){
-        fprintf(stderr, "ERROR: ");
-		fprintf(stderr, msg);
-		fprintf(stderr, "\n");
+        fprintf(stderr, "ERROR: %s\n", msg);
 		return AL_TRUE;
 	}
 	return AL_FALSE;
@@ -663,28 +661,28 @@ void al_list_audio_devices(const ALCchar *devices){
 	fprintf(stdout, "----------\n");
 }
 
-inline ALenum to_al_format(short channels, short samples){
-	bool stereo = (channels > 1);
+// inline ALenum to_al_format(short channels, short samples){
+// 	bool stereo = (channels > 1);
 
-	switch(samples){
-	case 16:
-		if(stereo){
-			return AL_FORMAT_STEREO16;
-		}
-		else{
-			return AL_FORMAT_MONO16;
-		}
-	case 8:
-		if(stereo){
-			return AL_FORMAT_STEREO8;
-		}
-		else{
-			return AL_FORMAT_MONO8;
-		}
-	default:
-		return -1;
-	}
-}
+// 	switch(samples){
+// 	case 16:
+// 		if(stereo){
+// 			return AL_FORMAT_STEREO16;
+// 		}
+// 		else{
+// 			return AL_FORMAT_MONO16;
+// 		}
+// 	case 8:
+// 		if(stereo){
+// 			return AL_FORMAT_STEREO8;
+// 		}
+// 		else{
+// 			return AL_FORMAT_MONO8;
+// 		}
+// 	default:
+// 		return -1;
+// 	}
+// }
 
 bool is_big_endian(){
 	int a = 1;

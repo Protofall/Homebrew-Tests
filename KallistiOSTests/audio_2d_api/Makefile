@@ -20,12 +20,8 @@ LIBS += -lm -lkosutils
 #Compile for linux
 linux:
 	rm -f $(PROG)
-	gcc -c audio_assist.c -lpthread -D_arch_unix
-	gcc -o $(PROG) -lpthread -D_arch_unix main.c audio_assist.o
-
-# 	gcc -c audio_assist.c -lpthread
-# 	gcc -c main.c -lpthread
-# 	gcc -o $(PROG) main.o audio_assist.o -lpthread
+	gcc -c audio_assist.c -lopenal -lpthread -D_arch_unix
+	gcc -o $(PROG) -lopenal -lpthread -D_arch_unix main.c audio_assist.o audio_assist.h
 
 all: rm-elf $(TARGET)
 
