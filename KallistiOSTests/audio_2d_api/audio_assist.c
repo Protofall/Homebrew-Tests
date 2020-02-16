@@ -478,98 +478,98 @@ void * audio_stream_player(void * args){
 	//Queue up all buffers for the source with the beginning of the song
 	if(audio_prep_stream_buffers() == AL_FALSE){return NULL;}	//Currently only works for WAV files
 
-	//Rework everything below
-	while(1){
-		;
-	}
-
-
+	uint8_t command;
  	ALvoid *data;
 
 	ALint iBuffersProcessed;
-	ALint iTotalBuffersProcessed;
 	ALuint uiBuffer;
 	// Buffer queuing loop must operate in a new thread
 	iBuffersProcessed = 0;
 
-	if(audio_play_source(_audio_streamer_source) == AL_FALSE){return NULL;}
+	//Different play states
+	// AL_STOPPED
+	// AL_PLAYING
+	// AL_PAUSED
+	// AL_INITIAL (Set by rewind)
+	// AL_UNDETERMINED (When a source is initially stated)
+	// AL_STREAMING (after successful alSourceQueueBuffers)
 
-	while (1)
-	{
+	// - The difference between STOP and PAUSE is that calling alSourcePlay after pausing
+	// will resume from the position the source was when it was paused and
+	// calling alSourcePlay after stopping will resume from the beginning of
+	// the buffer(s).
 
-		//Different play states
-		// AL_STOPPED
-		// AL_PLAYING
-		// AL_PAUSED
-		// AL_INITIAL (Set by rewind)
-		// AL_UNDETERMINED (When a source is initially stated)
-		// AL_STREAMING (after successful alSourceQueueBuffers)
+	//Normally when the attached buffers are done playing, the source will progress to the stopped state
 
-		// - The difference between STOP and PAUSE is that calling alSourcePlay after pausing
-		// will resume from the position the source was when it was paused and
-		// calling alSourcePlay after stopping will resume from the beginning of
-		// the buffer(s).
-
-		//Normally when the attached buffers are done playing, the source will progress to the stopped state
+	while(1){
+		pthread_mutex_lock(&_audio_streamer_lock);
+		command = _audio_streamer_command;
+		_audio_streamer_command = AUDIO_COMMAND_NONE;
+		pthread_mutex_unlock(&_audio_streamer_lock);
 
 		if(audio_update_source_state(_audio_streamer_source) == AL_FALSE){return NULL;}
-		// while(_audio_streamer_source->source_state != AL_STOPPED){	//This allows us to pause it later
-		while(_audio_streamer_source->source_state == AL_PLAYING){
-			//Process any command it might have been given
-			;
 
-			alGetSourcei(_audio_streamer_source->source_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);	//Is this call required?
+		if(command > AUDIO_COMMAND_END){command = AUDIO_COMMAND_NONE;}	//Invalid command given
+		else if(command == AUDIO_COMMAND_PLAY){alSourcePlay(_audio_streamer_source->source_id);}
+		else if(command == AUDIO_COMMAND_PAUSE){alSourcePause(_audio_streamer_source->source_id);}
+		else if(command == AUDIO_COMMAND_UNPAUSE){alSourcePlay(_audio_streamer_source->source_id);}
+		else if(command == AUDIO_COMMAND_STOP){	//I feel like this is done poorly, but I can't tell
+			alSourceStop(_audio_streamer_source->source_id);	//All buffers should now be unqueued unless your Nvidia driver sucks
 
-			// Buffer queuing loop must operate in a new thread
+			//Now reset the buffers to the beginning
 			iBuffersProcessed = 0;
-			alGetSourcei(_audio_streamer_source->source_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
-
-			iTotalBuffersProcessed += iBuffersProcessed;	//Is that var required?
-
-			// For each processed buffer, remove it from the source queue, read the next chunk of
-			// audio data from the file, fill the buffer with new data, and add it to the source queue
-			while (iBuffersProcessed)
-			{
-				// Remove the buffer from the queue (uiBuffer contains the buffer ID for the dequeued buffer)
-				//The unqueue operation will only take place if all n (1) buffers can be removed from the queue.
-				//Thats why we do it one at a time
+			while(iBuffersProcessed){
 				uiBuffer = 0;
 				alSourceUnqueueBuffers(_audio_streamer_source->source_id, 1, &uiBuffer);
-
-				// Read more pData audio data (if there is any)
-				data = malloc(AUDIO_STREAMING_DATA_CHUNK_SIZE);
-				audio_WAVE_buffer_fill(data);
-				// Copy audio data to buffer
-				alBufferData(uiBuffer, _audio_streamer_source->info->format, data, AUDIO_STREAMING_DATA_CHUNK_SIZE, _audio_streamer_source->info->freq);
-				free(data);
-				// Insert the audio buffer to the source queue
-				alSourceQueueBuffers(_audio_streamer_source->source_id, 1, &uiBuffer);
-
 				iBuffersProcessed--;
 			}
-
-			if(audio_update_source_state(_audio_streamer_source) == AL_FALSE){return NULL;}
-			
-			//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
-			//we should process them
-			#if defined(_arch_unix) || defined(_arch_dreamcast)
-				sched_yield();
-			#endif
-			#ifdef _arch_windows
-				sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
-							//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
-			#endif
+			audio_prep_stream_buffers();
 		}
+		else if(command == AUDIO_COMMAND_END){break;}
+
+		// Buffer queuing loop must operate in a new thread
+		iBuffersProcessed = 0;
+		alGetSourcei(_audio_streamer_source->source_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
+
+		// For each processed buffer, remove it from the source queue, read the next chunk of
+		// audio data from the file, fill the buffer with new data, and add it to the source queue
+		while(iBuffersProcessed){
+			// Remove the buffer from the queue (uiBuffer contains the buffer ID for the dequeued buffer)
+			//The unqueue operation will only take place if all n (1) buffers can be removed from the queue.
+			//Thats why we do it one at a time
+			uiBuffer = 0;
+			alSourceUnqueueBuffers(_audio_streamer_source->source_id, 1, &uiBuffer);
+
+			// Read more pData audio data (if there is any)
+			data = malloc(AUDIO_STREAMING_DATA_CHUNK_SIZE);
+			audio_WAVE_buffer_fill(data);
+			// Copy audio data to buffer
+			alBufferData(uiBuffer, _audio_streamer_source->info->format, data, AUDIO_STREAMING_DATA_CHUNK_SIZE, _audio_streamer_source->info->freq);
+			free(data);
+			// Insert the audio buffer to the source queue
+			alSourceQueueBuffers(_audio_streamer_source->source_id, 1, &uiBuffer);
+
+			iBuffersProcessed--;
+		}
+
+		if(audio_update_source_state(_audio_streamer_source) == AL_FALSE){return NULL;}
+		
+		//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
+		//we should process them
+		#if defined(_arch_unix) || defined(_arch_dreamcast)
+			sched_yield();
+		#endif
+		#ifdef _arch_windows
+			sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
+						//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
+		#endif
 	}
 
 	//Shutdown the system
-	audio_stop_source(_audio_streamer_source);
+	audio_stop_source(_audio_streamer_source);	//This will de-queue all of the queue-d buffers
 	fclose(_audio_streamer_fp);
 
-	//Free the buffers, but this is done in audio_free_source()
-	// alDeleteSources(1, &source);
-	// alDeleteBuffers(_audio_streamer_source->num_buffers, &_audio_streamer_source->buffer_id[0]);
-
+	//Tell the world we're done
 	pthread_mutex_lock(&_audio_streamer_lock);
 	_audio_streamer_thd_active = 0;
 	pthread_mutex_unlock(&_audio_streamer_lock);
