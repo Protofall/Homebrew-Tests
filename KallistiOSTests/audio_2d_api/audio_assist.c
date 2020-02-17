@@ -408,7 +408,7 @@ ALboolean audio_unpause_source(audio_source_t * source){
 
 		//Should checking the source state be out of the mutex lock?
 		audio_update_source_state(source);
-		if(source->source_state != AL_PAUSED){
+		if(source->source_state != AL_PAUSED && source->source_state != AL_STOPPED){
 			ret_val = AL_FALSE;
 		}
 
@@ -515,15 +515,7 @@ void * audio_stream_player(void * args){
 		else if(command == AUDIO_COMMAND_UNPAUSE){alSourcePlay(_audio_streamer_source->source_id);}
 		else if(command == AUDIO_COMMAND_STOP){	//I feel like this is done poorly, but I can't tell
 			alSourceStop(_audio_streamer_source->source_id);	//All buffers should now be unqueued unless your Nvidia driver sucks
-
-			//Now reset the buffers to the beginning
-			iBuffersProcessed = 0;
-			while(iBuffersProcessed){
-				uiBuffer = 0;
-				alSourceUnqueueBuffers(_audio_streamer_source->source_id, 1, &uiBuffer);
-				iBuffersProcessed--;
-			}
-			audio_prep_stream_buffers();
+			fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);	//Reset to beginning
 		}
 		else if(command == AUDIO_COMMAND_END){break;}
 
