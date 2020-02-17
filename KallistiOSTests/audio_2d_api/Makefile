@@ -22,8 +22,12 @@ all: rm-elf $(TARGET)
 #Compile for linux
 linux:
 	rm -f $(PROG)
-	gcc -c audio_assist.c -lopenal -lpthread -D_arch_unix
-	gcc -o $(PROG) -lopenal -lpthread -D_arch_unix main.c audio_assist.o
+	gcc -c -I/usr/local/include audio_assist.c -lopenal -lpthread -D_arch_unix
+	gcc -c -I/usr/local/include main.c -lopenal -lpthread -D_arch_unix
+	gcc -o $(PROG) main.o audio_assist.o -L/usr/local/lib -lopenal -lpthread
+
+# gcc -o $(PROG) -lopenal -lpthread -D_arch_unix main.o audio_assist.o
+
 
 include $(KOS_BASE)/Makefile.rules
 
