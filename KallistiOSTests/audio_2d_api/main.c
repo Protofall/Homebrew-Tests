@@ -144,8 +144,10 @@ int main(int argc, char **argv){
 	if(audio_init() != 0){return -1;}
 	printf("HELLO2!\n");
 
+	#ifdef _arch_dreamcast
 	pvr_init_defaults();	//Init kos
 	font_init();	//Initialise the font
+	#endif
 
 	ALCenum error;
 	audio_info_t infoFX, infoMusic;
@@ -242,11 +244,11 @@ int main(int argc, char **argv){
 		pvr_scene_finish();
 		#else
 		
-		printf(text);
+		printf("%s", text);
 		scanf("%19s", input);
 		uint8_t i = 0;
 		while(input[i] != '\0'){
-			switch(input[i]):
+			switch(input[i]){
 			case 0:
 				target_source = &sourceMusic;
 				break;
@@ -271,6 +273,7 @@ int main(int argc, char **argv){
 			case 7:
 				play = 0;
 				break;
+			}
 		}
 
 		if(target_cmd == 0){audio_play_source(&sourceMusic);}
@@ -283,12 +286,14 @@ int main(int argc, char **argv){
 		target_cmd = -1;
 	}
 
-	pvr_mem_free(font_tex);
-
 	//Stop the sources
 	audio_stop_source(&sourceMusic);
 	audio_stop_source(&sourceFX1);
 	audio_stop_source(&sourceFX2);
+
+	#ifdef _arch_dreamcast
+	pvr_mem_free(font_tex);
+	#endif
 
 	//Now free their data
 	audio_free_source(&sourceMusic);
