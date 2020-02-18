@@ -10,10 +10,14 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-// #include <crayon/vector_structs.h>
-typedef struct vec2_f{
-	float x, y;
-} vec2_f_t;
+//Crayon implements this
+// #if defined(_arch_dreamcast)
+	// #include <crayon/vector_structs.h>
+// #else
+	typedef struct vec2_f{
+		float x, y;
+	} vec2_f_t;
+// #endif
 
 #if defined(_arch_unix) || defined(_arch_dreamcast)
 	#include <sched.h>
