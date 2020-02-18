@@ -158,22 +158,21 @@ int main(int argc, char **argv){
 	if(audio_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
 	if(audio_create_source(&sourceFX, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
-	// audio_create_source(&sourceFX, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1, AUDIO_FREE_DATA);
 
 	//Setup music
-	// #ifdef _arch_dreamcast
-	// 	if(audio_load_WAV_file_info("/rd/The-Haunted-House.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
-	// #else
-	// 	if(audio_load_WAV_file_info("romdisk/The-Haunted-House.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
-	// #endif
-	// if(audio_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
+	#ifdef _arch_dreamcast
+		if(audio_load_WAV_file_info("/rd/The-Haunted-House.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
+	#else
+		if(audio_load_WAV_file_info("romdisk/The-Haunted-House.wav", &infoMusic, AUDIO_STREAMING) == AL_FALSE){return -1;}
+	#endif
+	if(audio_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
-	// //Note last param is ignored for streaming
-	// if(audio_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_FALSE, 0.5, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
+	//Note last param is ignored for streaming
+	if(audio_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_FALSE, 0.5, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
 
 	//Play the sound effect and music
-	// if(audio_play_source(&sourceFX) == AL_FALSE){return -1;}
-	// if(audio_play_source(&sourceMusic) == AL_FALSE){return -1;}
+	if(audio_play_source(&sourceFX) == AL_FALSE){return -1;}
+	if(audio_play_source(&sourceMusic) == AL_FALSE){return -1;}
 
 	//So the program continues forever
 	while(1){
@@ -182,8 +181,7 @@ int main(int argc, char **argv){
 
 		pvr_list_begin(PVR_LIST_TR_POLY);
 
-			// draw_string(30, 30, 1, 255, 255, 216, 0, "TEST", 2, 2);	//Draws in yellow colour
-			draw_string(30, 30, 1, 255, 255, 216, 0, BLAH, 2, 2);	//Draws in yellow colour
+			draw_string(30, 30, 1, 255, 255, 216, 0, "TEST", 2, 2);	//Draws in yellow colour
 
 		pvr_list_finish();
 
@@ -193,13 +191,16 @@ int main(int argc, char **argv){
 
 	pvr_mem_free(font_tex);
 
-	// audio_stop_source(&sourceMusic);
-	// audio_free_source(&sourceMusic);
-	// audio_unload_info(&infoMusic);
-
+	//Stop the sources
+	audio_stop_source(&sourceMusic);
 	audio_stop_source(&sourceFX);
+
+	//Now free their data
+	audio_free_source(&sourceMusic);
+	audio_free_info(&infoMusic);
+
 	audio_free_source(&sourceFX);
-	audio_unload_info(&infoFX);
+	audio_free_info(&infoFX);
 
 	audio_shutdown();
 

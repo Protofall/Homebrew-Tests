@@ -58,9 +58,6 @@ typedef struct audio_source{
 	ALint state;
 } audio_source_t;
 
-char BLAH[200];
-
-
 //We only need one of each for all audio
 ALCcontext * _al_context;
 ALCdevice * _al_device;
@@ -95,9 +92,9 @@ void audio_shutdown();
 
 //These load functions will instanly fail if you want to stream and there's another streamer present
 ALboolean audio_load_WAV_file_info(const char * path, audio_info_t * info, uint8_t mode);	//Mode is stream/local
-ALboolean audio_load_CDDA_track_info(uint8_t track, audio_info_t * info, uint8_t mode);	//Data is never stored if in stream mode
+ALboolean audio_load_CDDA_track_info(uint8_t drive, uint8_t track, audio_info_t * info, uint8_t mode);	//Data is never stored if in stream mode
 
-ALboolean audio_unload_info(audio_info_t * info);	//This will free path and data if they are set
+ALboolean audio_free_info(audio_info_t * info);	//This will free path and data if they are set
 ALboolean audio_free_source(audio_source_t * source);
 
 //Note: Despite what option you give the loader, it will never store the data in stream mode

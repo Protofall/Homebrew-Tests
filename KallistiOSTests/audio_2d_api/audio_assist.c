@@ -84,7 +84,7 @@ void audio_shutdown(){
 }
 
 ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, uint8_t mode){
-	if((mode & AUDIO_STREAMING) && (_audio_streamer_source != NULL || _audio_streamer_fp != NULL)){
+	if((mode & AUDIO_STREAMING) && (_audio_streamer_info != NULL || _audio_streamer_fp != NULL)){
 		return AL_FALSE;
 	}
 
@@ -103,7 +103,7 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 
 	if(strncmp(buffer, "RIFF", 4) != 0){
 		fprintf(stderr, "Not a valid wave file\n");
-		return AL_FALSE;
+		goto error1;
 	}
 
 	fread(buffer, 4, sizeof(char), in);
@@ -125,8 +125,9 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 	info->size = (ALsizei) convert_to_int(buffer, 4);	//This isn't the true size
 
 	ALvoid * data;
-	if(info->streaming != AUDIO_STREAMING){
+	if(info->streaming == AUDIO_NOT_STREAMING){
 		data = (ALvoid*) malloc(info->size * sizeof(char));
+		if(data == NULL){goto error1;}
 		fread(data, info->size, sizeof(char), in);
 		fclose(in);
 	}
@@ -147,15 +148,16 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 	info->srcs_attached = 0;
 	info->buff_cnt = (info->streaming == AUDIO_STREAMING) ? AUDIO_STREAMING_NUM_BUFFERS : 1;
 	info->buff_id = malloc(sizeof(ALuint) * info->buff_cnt);
+	if(info->buff_id == NULL){return AL_FALSE;}
 	alGenBuffers(info->buff_cnt, info->buff_id);	//Generating "info->buff_cnt" buffers. 2nd param is a pointer to an array
 													//of ALuint values which will store the names of the new buffers
-													//Seems "buffer" is just an ID and doesn't actually contain the data?
-	if(audio_test_error(&error, "buffer generation") == AL_TRUE){return AL_FALSE;}
+													//Seems "buff_id" doesn't actually contain the data?
+	if(audio_test_error(&error, "buffer generation") == AL_TRUE){goto error2;}
 
 	//Filling the buffer for non-streamers
 	if(info->streaming == AUDIO_NOT_STREAMING){
 		alBufferData(info->buff_id[0], info->format, data, info->size, info->freq);	//Fill the buffer with PCM data
-		if(audio_test_error(&error, "buffer copy") == AL_TRUE){return AL_FALSE;}
+		if(audio_test_error(&error, "buffer copy") == AL_TRUE){goto error3;}
 
 		free(data);
 	}
@@ -166,10 +168,26 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 	printf("Loaded WAV file!\n");
 
 	return AL_TRUE;
+
+
+	//--------------------
+
+
+	error3:
+	alDeleteBuffers(info->buff_cnt, info->buff_id);
+
+	error2:
+	free(info->buff_id);
+	if(data){free(data);}
+	return AL_FALSE;
+
+	error1:
+	fclose(in);
+	return AL_FALSE;
 }
 
 //Currently unimplemented
-ALboolean audio_load_CDDA_track_info(uint8_t track, audio_info_t * info, uint8_t mode){
+ALboolean audio_load_CDDA_track_info(uint8_t drive, uint8_t track, audio_info_t * info, uint8_t mode){
 	if(mode & AUDIO_STREAMING && (_audio_streamer_source != NULL || _audio_streamer_fp != NULL)){
 		return AL_FALSE;
 	}
@@ -177,7 +195,7 @@ ALboolean audio_load_CDDA_track_info(uint8_t track, audio_info_t * info, uint8_t
 	return AL_FALSE;
 }
 
-ALboolean audio_unload_info(audio_info_t * info){
+ALboolean audio_free_info(audio_info_t * info){
 	if(info == NULL){
 		return AL_FALSE;
 	}
@@ -625,7 +643,6 @@ ALboolean audio_test_error(ALCenum * error, char * msg){
 	*error = alGetError();
 	if(*error != AL_NO_ERROR){
         fprintf(stderr, "ERROR: %s\n", msg);
-        strcpy(BLAH, msg);
 		return AL_TRUE;
 	}
 	return AL_FALSE;
