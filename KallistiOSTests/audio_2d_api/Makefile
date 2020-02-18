@@ -32,16 +32,17 @@ linux:
 include $(KOS_BASE)/Makefile.rules
 
 clean:
-	-rm -f $(TARGET) $(OBJS) romdisk.*
+	rm -f $(TARGET) $(OBJS) romdisk.*
 	rm -f *.bin
 	rm -f *.iso
 	rm -f *.cdi
+	rm -f $(PROG)
 
 rm-elf:
-	-rm -f $(TARGET) romdisk.*
+	rm -f $(TARGET) romdisk.*
 
 cdi: $(TARGET)
-	elf-to-cdi.sh $(PROG)
+	../elf-to-cdi.sh $(PROG)
 
 $(TARGET): $(OBJS) romdisk.o
 	$(KOS_CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(KOS_START) \

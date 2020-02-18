@@ -3,7 +3,7 @@
 uint8_t audio_init(){
 	_audio_streamer_source = NULL;
 	_audio_streamer_fp = NULL;
-	 _audio_streamer_stopping = 0;
+	_audio_streamer_stopping = 0;
 
 	ALboolean enumeration;
 	ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };	//Double check what these vars mean
@@ -42,13 +42,13 @@ uint8_t audio_init(){
 	alListener3f(AL_POSITION, 0, 0, 1.0f);
 	if(audio_test_error(&error, "listener position") == AL_TRUE){return 1;}
 
-    alListener3f(AL_VELOCITY, 0, 0, 0);
+	alListener3f(AL_VELOCITY, 0, 0, 0);
 	if(audio_test_error(&error, "listener velocity") == AL_TRUE){return 1;}
 
 	alListenerfv(AL_ORIENTATION, listenerOri);
 	if(audio_test_error(&error, "listener orientation") == AL_TRUE){return 1;}
 
-	//Init the mutex for the streamer thread
+	// Init the mutex for the streamer thread
 	if(pthread_mutex_init(&_audio_streamer_lock, NULL) != 0){
 		printf("Mutex init failed\n");
 		return 1;
@@ -89,18 +89,7 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 	}
 
 	info->streaming = !!(mode & AUDIO_STREAMING);
-	switch(info->streaming){
-		case AUDIO_NOT_STREAMING:
-			info->data_type = AUDIO_DATA_TYPE_WAV;
-		break;
-		case AUDIO_STREAMING:
-			info->data_type = AUDIO_DATA_TYPE_WAV;
-		break;
-		default:
-			fprintf(stderr, "Invalid wav load mode given\n");
-			return AL_FALSE;
-		break;
-	}
+	info->data_type = AUDIO_DATA_TYPE_WAV;
 
 	char buffer[4];
 
@@ -135,12 +124,15 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 	fread(buffer, 4, sizeof(char), in);
 	info->size = (ALsizei) convert_to_int(buffer, 4);	//This isn't the true size
 
+	ALvoid * data;
 	if(info->streaming != AUDIO_STREAMING){
-		info->data = (ALvoid*) malloc(info->size * sizeof(char));
-		fread(info->data, info->size, sizeof(char), in);
+		data = (ALvoid*) malloc(info->size * sizeof(char));
+		fread(data, info->size, sizeof(char), in);
+		fclose(in);
 	}
 	else{
-		info->data = NULL;
+		data = NULL;
+		_audio_streamer_fp = in;
 	}
 
 	if(chan == 1){
@@ -150,12 +142,25 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 		info->format = (bps == 8) ? AL_FORMAT_STEREO8 : AL_FORMAT_STEREO16;
 	}
 
-	_audio_streamer_info = info;
-	if(info->streaming != AUDIO_STREAMING){
-		fclose(in);
+	//Generate the buffers
+	ALCenum error;
+	info->srcs_attached = 0;
+	info->buff_cnt = (info->streaming == AUDIO_STREAMING) ? AUDIO_STREAMING_NUM_BUFFERS : 1;
+	info->buff_id = malloc(sizeof(ALuint) * info->buff_cnt);
+	alGenBuffers(info->buff_cnt, info->buff_id);	//Generating "info->buff_cnt" buffers. 2nd param is a pointer to an array
+													//of ALuint values which will store the names of the new buffers
+													//Seems "buffer" is just an ID and doesn't actually contain the data?
+	if(audio_test_error(&error, "buffer generation") == AL_TRUE){return AL_FALSE;}
+
+	//Filling the buffer for non-streamers
+	if(info->streaming == AUDIO_NOT_STREAMING){
+		alBufferData(info->buff_id[0], info->format, data, info->size, info->freq);	//Fill the buffer with PCM data
+		if(audio_test_error(&error, "buffer copy") == AL_TRUE){return AL_FALSE;}
+
+		free(data);
 	}
 	else{
-		_audio_streamer_fp = in;
+		_audio_streamer_info = info;
 	}
 
 	printf("Loaded WAV file!\n");
@@ -177,7 +182,8 @@ ALboolean audio_unload_info(audio_info_t * info){
 		return AL_FALSE;
 	}
 
-	audio_free_info_data(info);	//Note: If there's no data this doesn nothing
+	alDeleteBuffers(info->buff_cnt, info->buff_id);	//1st param is number of buffers
+	free(info->buff_id);
 
 	if(info->streaming == AUDIO_STREAMING){
 		fclose(_audio_streamer_fp);
@@ -190,21 +196,12 @@ ALboolean audio_unload_info(audio_info_t * info){
 	return AL_TRUE;
 }
 
-void audio_free_info_data(audio_info_t * info){
-	if(info != NULL && info->data){
-		free(info->data);
-		info->data = NULL;
-	}
-	return;
-}
-
 ALboolean audio_free_source(audio_source_t * source){
 	if(source == NULL){
 		return AL_FALSE;
 	}
 
-	alDeleteSources(1, &source->source_id);
-	alDeleteBuffers(source->num_buffers, source->buffer_id);	//1st param is number of buffers
+	alDeleteSources(1, &source->src_id);
 
 	//So we can later know there isn't a streamer presents
 	if(source == _audio_streamer_source){
@@ -218,6 +215,8 @@ ALboolean audio_free_source(audio_source_t * source){
 
 		_audio_streamer_source = NULL;
 	}
+
+	source->info->srcs_attached--;
 
 	return AL_TRUE;
 }
@@ -250,13 +249,13 @@ ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2
 
 	ALCenum error;
 
-	alGenSources((ALuint)1, &source->source_id);	//Generate one source
+	alGenSources((ALuint)1, &source->src_id);	//Generate one source
 	if(audio_test_error(&error, "source generation") == AL_TRUE){return AL_FALSE;}
 
-	alSourcef(source->source_id, AL_PITCH, speed);
+	alSourcef(source->src_id, AL_PITCH, speed);
 	if(audio_test_error(&error, "source pitch") == AL_TRUE){return AL_FALSE;}
 
-	alSourcef(source->source_id, AL_GAIN, volume);
+	alSourcef(source->src_id, AL_GAIN, volume);
 	if(audio_test_error(&error, "source gain") == AL_TRUE){return AL_FALSE;}
 
 	/*
@@ -272,13 +271,14 @@ ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2
 		AL_REFERENCE_DISTANCE 
 	*/
 
-	alSource3f(source->source_id, AL_POSITION, position.x, position.y, 0);	//Since we're 2D, Z is always zero
+	alSource3f(source->src_id, AL_POSITION, position.x, position.y, 0);	//Since we're 2D, Z is always zero
 	if(audio_test_error(&error, "source position") == AL_TRUE){return AL_FALSE;}
 
-	alSource3f(source->source_id, AL_VELOCITY, 0, 0, 0);
+	alSource3f(source->src_id, AL_VELOCITY, 0, 0, 0);
 	if(audio_test_error(&error, "source velocity") == AL_TRUE){return AL_FALSE;}
 
-	alSourcei(source->source_id, AL_LOOPING, looping);
+	//When streaming we handle looping manually, so we tell OpenAL not to bother with looping
+	alSourcei(source->src_id, AL_LOOPING, (info->streaming == AUDIO_STREAMING) ? AL_FALSE : looping);
 	if(audio_test_error(&error, "source looping") == AL_TRUE){return AL_FALSE;}
 
 	/*
@@ -290,27 +290,9 @@ ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2
 		AL_BUFFER
 		AL_SOURCE_STATE
 	*/
-
-	//1 buffer normally, but "AUDIO_STREAMING_NUM_BUFFERS" for streaming
-	source->num_buffers = (info->streaming == AUDIO_STREAMING) ? AUDIO_STREAMING_NUM_BUFFERS : 1;
-
-	//Generate the buffers
-	source->buffer_id = malloc(sizeof(ALuint) * source->num_buffers);
-	alGenBuffers(source->num_buffers, source->buffer_id);	//Generating "source->num_buffers" buffers. 2nd param is a pointer to an array
-															//of ALuint values which will store the names of the new buffers
-															//Seems "buffer" is just an ID and doesn't actually contain the data?
-	if(audio_test_error(&error, "buffer generation") == AL_TRUE){return AL_FALSE;}
-
 	if(info->streaming == AUDIO_NOT_STREAMING){
-		alBufferData(source->buffer_id[0], info->format, info->data, info->size, info->freq);	//Fill the buffer with PCM data
-		if(audio_test_error(&error, "buffer copy") == AL_TRUE){return AL_FALSE;}
-
-		alSourcei(source->source_id, AL_BUFFER, source->buffer_id[0]);
+		alSourcei(source->src_id, AL_BUFFER, info->buff_id[0]);
 		if(audio_test_error(&error, "buffer binding") == AL_TRUE){return AL_FALSE;}
-
-		if(delete_data){
-			audio_free_info_data(info);
-		}
 	}
 	else{	//We start the streamer thread
 		if(pthread_create(&_audio_streamer_thd_id, NULL, audio_stream_player, NULL)){
@@ -325,6 +307,8 @@ ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2
 		}
 	}
 
+	info->srcs_attached++;
+
 	return AL_TRUE;
 }
 
@@ -334,7 +318,7 @@ ALboolean audio_update_source_state(audio_source_t * source){
 	}
 
 	ALCenum error;
-	alGetSourcei(source->source_id, AL_SOURCE_STATE, &source->source_state);
+	alGetSourcei(source->src_id, AL_SOURCE_STATE, &source->state);
 	if(audio_test_error(&error, "source state get") == AL_TRUE){return AL_FALSE;}
 
 	return AL_TRUE;
@@ -358,7 +342,7 @@ ALboolean audio_play_source(audio_source_t * source){
 		pthread_mutex_unlock(&_audio_streamer_lock);
 		return ret_val;
 	}
-	alSourcePlay(source->source_id);	//If called on a source that is already playing, it will restart from the beginning
+	alSourcePlay(source->src_id);	//If called on a source that is already playing, it will restart from the beginning
 	if(audio_test_error(&error, "source playing") == AL_TRUE){return AL_FALSE;}
 	return AL_TRUE;
 }
@@ -377,7 +361,7 @@ ALboolean audio_pause_source(audio_source_t * source){
 
 		//Should checking the source state be out of the mutex lock?
 		audio_update_source_state(source);
-		if(source->source_state != AL_PLAYING){
+		if(source->state != AL_PLAYING){
 			ret_val = AL_FALSE;
 		}
 
@@ -388,7 +372,7 @@ ALboolean audio_pause_source(audio_source_t * source){
 		pthread_mutex_unlock(&_audio_streamer_lock);
 		return ret_val;
 	}
-	alSourcePause(source->source_id);
+	alSourcePause(source->src_id);
 	if(audio_test_error(&error, "source pausing") == AL_TRUE){return AL_FALSE;}
 	return AL_TRUE;
 }
@@ -407,7 +391,7 @@ ALboolean audio_unpause_source(audio_source_t * source){
 
 		//Should checking the source state be out of the mutex lock?
 		audio_update_source_state(source);
-		if(source->source_state != AL_PAUSED && source->source_state != AL_STOPPED){
+		if(source->state != AL_PAUSED && source->state != AL_STOPPED){
 			ret_val = AL_FALSE;
 		}
 
@@ -418,7 +402,7 @@ ALboolean audio_unpause_source(audio_source_t * source){
 		pthread_mutex_unlock(&_audio_streamer_lock);
 		return ret_val;
 	}
-	alSourcePlay(source->source_id);
+	alSourcePlay(source->src_id);
 	if(audio_test_error(&error, "source playing") == AL_TRUE){return AL_FALSE;}
 	return AL_TRUE;
 }
@@ -441,7 +425,7 @@ ALboolean audio_stop_source(audio_source_t * source){
 		pthread_mutex_unlock(&_audio_streamer_lock);
 		return ret_val;
 	}
-	alSourceStop(source->source_id);
+	alSourceStop(source->src_id);
 	if(audio_test_error(&error, "source stopping") == AL_TRUE){return AL_FALSE;}
 	return AL_TRUE;
 }
@@ -451,12 +435,12 @@ ALboolean audio_prep_stream_buffers(){
 
 	// Fill all the buffers with audio data from the wave file
 	uint8_t i;
-	for(i = 0; i < _audio_streamer_source->num_buffers; i++){
+	for(i = 0; i < _audio_streamer_info->buff_cnt; i++){
 		data = malloc(AUDIO_STREAMING_DATA_CHUNK_SIZE);
 		audio_WAVE_buffer_fill(data);	//data array is filled with song info
-		alBufferData(_audio_streamer_source->buffer_id[i], _audio_streamer_source->info->format, data, AUDIO_STREAMING_DATA_CHUNK_SIZE, _audio_streamer_source->info->freq);
+		alBufferData(_audio_streamer_info->buff_id[i], _audio_streamer_source->info->format, data, AUDIO_STREAMING_DATA_CHUNK_SIZE, _audio_streamer_source->info->freq);
 		free(data);
-		alSourceQueueBuffers(_audio_streamer_source->source_id, 1, &_audio_streamer_source->buffer_id[i]);
+		alSourceQueueBuffers(_audio_streamer_source->src_id, 1, &_audio_streamer_info->buff_id[i]);
 	}
 
 	ALCenum error;
@@ -503,26 +487,32 @@ void * audio_stream_player(void * args){
 		_audio_streamer_command = AUDIO_COMMAND_NONE;
 		pthread_mutex_unlock(&_audio_streamer_lock);
 
-		//Not really needed, but I should be checking states here and not in the calls...I think?
-		// audio_update_source_state(_audio_streamer_source);
+		audio_update_source_state(_audio_streamer_source);
 
 		if(command > AUDIO_COMMAND_END){command = AUDIO_COMMAND_NONE;}	//Invalid command given
 		else if(command == AUDIO_COMMAND_PLAY || command == AUDIO_COMMAND_UNPAUSE){
-			alSourcePlay(_audio_streamer_source->source_id);
+			if(_audio_streamer_source->state == AL_PLAYING){	//If we play during playing then we reset
+				alSourceStop(_audio_streamer_source->src_id);
+				fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);
+			}
+			alSourcePlay(_audio_streamer_source->src_id);
 			_audio_streamer_stopping = 0;
 		}
 		else if(command == AUDIO_COMMAND_PAUSE){
-			alSourcePause(_audio_streamer_source->source_id);
+			alSourcePause(_audio_streamer_source->src_id);
 		}
 		else if(command == AUDIO_COMMAND_STOP){	//I feel like this is done poorly, but I can't tell
-			alSourceStop(_audio_streamer_source->source_id);	//All buffers should now be unqueued unless your Nvidia driver sucks
+			alSourceStop(_audio_streamer_source->src_id);	//All buffers should now be unqueued unless your Nvidia driver sucks
 			fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);	//Reset to beginning
+			// ALint lol;
+			// alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &lol);
+			// if(lol != 4){error_freeze("");}	//Its equal to 4 as expected
 		}
 		else if(command == AUDIO_COMMAND_END){break;}
 
 		// Buffer queuing loop must operate in a new thread
 		iBuffersProcessed = 0;
-		alGetSourcei(_audio_streamer_source->source_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
+		alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
 
 		// For each processed buffer, remove it from the source queue, read the next chunk of
 		// audio data from the file, fill the buffer with new data, and add it to the source queue
@@ -531,7 +521,7 @@ void * audio_stream_player(void * args){
 			//The unqueue operation will only take place if all n (1) buffers can be removed from the queue.
 			//Thats why we do it one at a time
 			uiBuffer = 0;
-			alSourceUnqueueBuffers(_audio_streamer_source->source_id, 1, &uiBuffer);
+			alSourceUnqueueBuffers(_audio_streamer_source->src_id, 1, &uiBuffer);
 
 			// Read more pData audio data (if there is any)
 			data = malloc(AUDIO_STREAMING_DATA_CHUNK_SIZE);
@@ -540,7 +530,7 @@ void * audio_stream_player(void * args){
 			alBufferData(uiBuffer, _audio_streamer_source->info->format, data, AUDIO_STREAMING_DATA_CHUNK_SIZE, _audio_streamer_source->info->freq);
 			free(data);
 			// Insert the audio buffer to the source queue
-			alSourceQueueBuffers(_audio_streamer_source->source_id, 1, &uiBuffer);
+			alSourceQueueBuffers(_audio_streamer_source->src_id, 1, &uiBuffer);
 
 			iBuffersProcessed--;
 		}
@@ -583,6 +573,10 @@ void audio_WAVE_buffer_fill(ALvoid * data){
 	}
 }
 
+void audio_CDDA_buffer_fill(ALvoid * data){
+	;
+}
+
 
 //----------------------ADJUSTMENT---------------------//
 
@@ -600,7 +594,7 @@ uint8_t audio_adjust_source_volume(audio_source_t * source, float vol){
 	if(vol < 0 || source == NULL){return 1;}
 
 	ALCenum error;
-	alSourcef(source->source_id, AL_GAIN, vol);
+	alSourcef(source->src_id, AL_GAIN, vol);
 	if(audio_test_error(&error, "source gain") == AL_TRUE){return 1;}
 	return 0;
 }
@@ -609,7 +603,7 @@ uint8_t audio_adjust_source_speed(audio_source_t * source, float speed){
 	if(speed < 0 || source == NULL){return 1;}
 
 	ALCenum error;
-	alSourcef(source->source_id, AL_PITCH, speed);
+	alSourcef(source->src_id, AL_PITCH, speed);
 	if(audio_test_error(&error, "source pitch") == AL_TRUE){return 1;}
 	return 0;
 }
@@ -618,7 +612,7 @@ uint8_t audio_set_source_looping(audio_source_t * source, ALboolean looping){
 	if(source == NULL){return 1;}
 
 	ALCenum error;
-	alSourcei(source->source_id, AL_LOOPING, looping);
+	alSourcei(source->src_id, AL_LOOPING, looping);
 	if(audio_test_error(&error, "source looping") == AL_TRUE){return AL_FALSE;}
 	return 0;
 }
@@ -631,6 +625,7 @@ ALboolean audio_test_error(ALCenum * error, char * msg){
 	*error = alGetError();
 	if(*error != AL_NO_ERROR){
         fprintf(stderr, "ERROR: %s\n", msg);
+        strcpy(BLAH, msg);
 		return AL_TRUE;
 	}
 	return AL_FALSE;
@@ -650,29 +645,6 @@ void al_list_audio_devices(const ALCchar *devices){
 	}
 	fprintf(stdout, "----------\n");
 }
-
-// inline ALenum to_al_format(short channels, short samples){
-// 	bool stereo = (channels > 1);
-
-// 	switch(samples){
-// 	case 16:
-// 		if(stereo){
-// 			return AL_FORMAT_STEREO16;
-// 		}
-// 		else{
-// 			return AL_FORMAT_MONO16;
-// 		}
-// 	case 8:
-// 		if(stereo){
-// 			return AL_FORMAT_STEREO8;
-// 		}
-// 		else{
-// 			return AL_FORMAT_MONO8;
-// 		}
-// 	default:
-// 		return -1;
-// 	}
-// }
 
 bool is_big_endian(){
 	int a = 1;

@@ -10,6 +10,11 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+// #include <crayon/vector_structs.h>
+typedef struct vec2_f{
+	float x, y;
+} vec2_f_t;
+
 #if defined(_arch_unix) || defined(_arch_dreamcast)
 	#include <sched.h>
 	#include <pthread.h>
@@ -29,16 +34,16 @@
 
 typedef struct audio_info{
 	uint8_t streaming;	//In RAM or streaming. We can only have one streaming at a time
-	uint8_t data_type;
+	uint8_t data_type;	//WAV, CDDA, OGG
 
-	ALvoid * data;	//Is NULL when in streaming mode or when the user decides to free it up
 	ALsizei size, freq;
 	ALenum format;
-} audio_info_t;
 
-typedef struct vec2_f{
-	float x, y;
-} vec2_f_t;
+	//Move the buffer info to here
+	uint8_t buff_cnt;	//Number of buffers
+	ALuint * buff_id;
+	uint8_t srcs_attached;	//Keeps a record of how many sources are using this info and buffer
+} audio_info_t;
 
 typedef struct audio_source{
 	audio_info_t * info;
@@ -49,13 +54,15 @@ typedef struct audio_source{
 	float volume;	//Gain
 	float speed;	//Pitch
 
-	uint8_t num_buffers;
-	ALuint * buffer_id;	//Each source can use 1 or more buffers (Hard-code streaming to use 4 buffers, else only 1?)
-	ALuint source_id;	//The source it uses
-	ALint source_state;
+	ALuint src_id;	//The source it uses
+	ALint state;
 } audio_source_t;
 
-ALCcontext * _al_context;	//We only need one for all audio
+char BLAH[200];
+
+
+//We only need one of each for all audio
+ALCcontext * _al_context;
 ALCdevice * _al_device;
 
 #define AUDIO_COMMAND_NONE 0
@@ -72,7 +79,7 @@ uint8_t         _audio_streamer_stopping;	//Only used for non-looping
 pthread_t       _audio_streamer_thd_id;	//Currently unused
 pthread_mutex_t _audio_streamer_lock;	//We lock the streamer command and thd_active vars
 
-FILE *          _audio_streamer_fp;	//If a pointer to the file/data on disc
+FILE*           _audio_streamer_fp;	//If a pointer to the file/data on disc
 audio_source_t* _audio_streamer_source;	//Is null if none are streaming, otherwise points to the streaming struct
 										//And this contains a pointer to the info struct
 audio_info_t*   _audio_streamer_info;
@@ -91,7 +98,6 @@ ALboolean audio_load_WAV_file_info(const char * path, audio_info_t * info, uint8
 ALboolean audio_load_CDDA_track_info(uint8_t track, audio_info_t * info, uint8_t mode);	//Data is never stored if in stream mode
 
 ALboolean audio_unload_info(audio_info_t * info);	//This will free path and data if they are set
-void audio_free_info_data(audio_info_t * info);
 ALboolean audio_free_source(audio_source_t * source);
 
 //Note: Despite what option you give the loader, it will never store the data in stream mode
@@ -115,7 +121,7 @@ ALboolean audio_prep_stream_buffers();
 void * audio_stream_player(void * args);	//This function is called by a pthread
 
 void audio_WAVE_buffer_fill(ALvoid * data);
-// void audio_CDDA_buffer_fill(ALvoid * data);
+void audio_CDDA_buffer_fill(ALvoid * data);
 
 //----------------------ADJUSTMENT---------------------//
 
@@ -134,8 +140,6 @@ uint8_t audio_set_source_looping(audio_source_t * source, ALboolean looping);
 ALboolean audio_test_error(ALCenum * error, char * msg);
 
 void al_list_audio_devices(const ALCchar *devices);
-
-// inline ALenum to_al_format(short channels, short samples);	//Unused
 
 bool is_big_endian();
 
