@@ -161,8 +161,8 @@ int main(int argc, char **argv){
 	#endif
 	if(audio_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
-	if(audio_create_source(&sourceFX1, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
-	if(audio_create_source(&sourceFX2, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
+	if(audio_create_source(&sourceFX1, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1) == AL_FALSE){return -1;}
+	if(audio_create_source(&sourceFX2, &infoFX, (vec2_f_t){0,0}, AL_TRUE, 0.25, 1) == AL_FALSE){return -1;}
 
 	//Setup music
 	#ifdef _arch_dreamcast
@@ -173,7 +173,7 @@ int main(int argc, char **argv){
 	if(audio_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
 	//Note last param is ignored for streaming
-	if(audio_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_FALSE, 0.5, 1, AUDIO_FREE_DATA) == AL_FALSE){return -1;}
+	if(audio_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_FALSE, 0.5, 1) == AL_FALSE){return -1;}
 
 	//Play the sound effect and music
 	// if(audio_play_source(&sourceFX1) == AL_FALSE){return -1;}

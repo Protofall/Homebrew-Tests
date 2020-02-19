@@ -19,20 +19,10 @@
 	} vec2_f_t;
 // #endif
 
-#if defined(_arch_unix)
-#define __linux__
-#define __unix__
-#define __APPLE__
-#endif
-
-#if defined(_arch_win)
-#define _WIN32
-#endif
-
-#if defined(_arch_unix) || defined(_arch_dreamcast)
+#if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
 	#include <sched.h>
 	#include <pthread.h>
-#elif defined(_arch_win)
+#elif defined(_WIN32)
 	#error "Windows not supported due to pthreads"
 #endif
 
@@ -102,23 +92,16 @@ audio_info_t*   _audio_streamer_info;
 uint8_t audio_init();	//Returns 1 if an error occured, 0 otherwise
 void audio_shutdown();
 
-//NOTE: I want an option to load a CDDA song into RAM instead of streaming if thats what the user wants
-
 //These load functions will instanly fail if you want to stream and there's another streamer present
 ALboolean audio_load_WAV_file_info(const char * path, audio_info_t * info, uint8_t mode);	//Mode is stream/local
 ALboolean audio_load_CDDA_track_info(uint8_t drive, uint8_t track, audio_info_t * info, uint8_t mode);	//Data is never stored if in stream mode
+ALboolean audio_load_OGG_file_info(const char * path, audio_info_t * info, uint8_t mode);
 
 ALboolean audio_free_info(audio_info_t * info);	//This will free path and data if they are set
 ALboolean audio_free_source(audio_source_t * source);
 
-//Note: Despite what option you give the loader, it will never store the data in stream mode
-#define AUDIO_KEEP_DATA 0
-#define AUDIO_FREE_DATA 1
-
-// `delete_data` means delete the original data buffer once used. You might not want to do this if you have multiple sources
-// using the same sound file
 ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2_f_t position, ALboolean looping,
-	float volume, float speed, uint8_t delete_data);
+	float volume, float speed);
 
 ALboolean audio_update_source_state(audio_source_t * source);
 
@@ -149,16 +132,13 @@ uint8_t audio_set_source_looping(audio_source_t * source, ALboolean looping);
 //----------------------MISC---------------------------//
 //MAYBE MAKE THESE STATIC?
 
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-
 ALboolean audio_test_error(ALCenum * error, char * msg);
 
-void al_list_audio_devices(const ALCchar *devices);
+static void al_list_audio_devices(const ALCchar *devices);
 
-bool is_big_endian();
+static bool is_big_endian();
 
-int convert_to_int(char * buffer, int len);
+static int convert_to_int(char * buffer, int len);
 
 
 #endif

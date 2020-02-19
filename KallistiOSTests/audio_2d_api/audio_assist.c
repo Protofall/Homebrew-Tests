@@ -200,6 +200,16 @@ ALboolean audio_load_CDDA_track_info(uint8_t drive, uint8_t track, audio_info_t 
 		return AL_FALSE;
 	}
 
+	//Fix later
+	return AL_FALSE;
+}
+
+ALboolean audio_load_OGG_file_info(const char * path, audio_info_t * info, uint8_t mode){
+	if(mode & AUDIO_STREAMING && (_audio_streamer_source != NULL || _audio_streamer_fp != NULL)){
+		return AL_FALSE;
+	}
+
+	//Fix later
 	return AL_FALSE;
 }
 
@@ -248,7 +258,7 @@ ALboolean audio_free_source(audio_source_t * source){
 }
 
 ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2_f_t position, ALboolean looping,
-	float volume, float speed, uint8_t delete_data){
+	float volume, float speed){
 
 	if(source == NULL || info == NULL || volume < 0 || speed < 0){
 		return AL_FALSE;
@@ -492,7 +502,7 @@ ALboolean audio_prep_stream_buffers(){
 	uint8_t i;
 	ALboolean res;
 	for(i = 0; i < _audio_streamer_info->buff_cnt; i++){
-		res = audio_streamer_buffer_fill(_audio_streamer_source->buff_id[i]);
+		res = audio_streamer_buffer_fill(_audio_streamer_info->buff_id[i]);
 		if(res == AL_FALSE){return AL_FALSE;}
 	}
 
@@ -578,10 +588,10 @@ void * audio_stream_player(void * args){
 
 		//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
 		//we should process them
-		#if defined(_arch_unix) || defined(_arch_dreamcast)
+		#if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
 			sched_yield();
 		#endif
-		#ifdef _arch_windows
+		#ifdef _WIN32
 			sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
 						//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
 		#endif
@@ -602,7 +612,7 @@ void * audio_stream_player(void * args){
 
 void audio_WAV_buffer_fill(ALvoid * data){
 	int spare = (_audio_streamer_source->info->size + WAV_HDR_SIZE) - ftell(_audio_streamer_fp);	//This is how much data in the entire file
-	int read = fread(data, 1, MIN(AUDIO_STREAMING_DATA_CHUNK_SIZE, spare), _audio_streamer_fp);
+	int read = fread(data, 1, (AUDIO_STREAMING_DATA_CHUNK_SIZE < spare) ? AUDIO_STREAMING_DATA_CHUNK_SIZE : spare, _audio_streamer_fp);
 	if(read < AUDIO_STREAMING_DATA_CHUNK_SIZE){
 		fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);	//Skips the header, beginning of body
 		if(_audio_streamer_source->looping){	//Fill from beginning
@@ -676,7 +686,7 @@ ALboolean audio_test_error(ALCenum * error, char * msg){
 	return AL_FALSE;
 }
 
-void al_list_audio_devices(const ALCchar *devices){
+static void al_list_audio_devices(const ALCchar *devices){
 	const ALCchar *device = devices, *next = devices + 1;
 	size_t len = 0;
 
@@ -691,12 +701,12 @@ void al_list_audio_devices(const ALCchar *devices){
 	fprintf(stdout, "----------\n");
 }
 
-bool is_big_endian(){
+static bool is_big_endian(){
 	int a = 1;
 	return !((char*)&a)[0];
 }
 
-int convert_to_int(char * buffer, int len){
+static int convert_to_int(char * buffer, int len){
 	int i = 0;
 	int a = 0;
 	if(!is_big_endian()){

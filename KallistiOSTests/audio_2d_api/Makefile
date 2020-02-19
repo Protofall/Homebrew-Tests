@@ -22,8 +22,8 @@ all: clean $(TARGET)
 #Compile for linux
 linux:
 	rm -f $(PROG)
-	gcc -c -I/usr/local/include audio_assist.c -lopenal -lpthread -D_arch_unix
-	gcc -c -I/usr/local/include main.c -lopenal -lpthread -D_arch_unix
+	gcc -c -I/usr/local/include audio_assist.c -lopenal -lpthread
+	gcc -c -I/usr/local/include main.c -lopenal -lpthread
 	gcc -o $(PROG) main.o audio_assist.o -L/usr/local/lib -lopenal -lpthread
 
 # gcc -o $(PROG) -lopenal -lpthread -D_arch_unix main.o audio_assist.o
