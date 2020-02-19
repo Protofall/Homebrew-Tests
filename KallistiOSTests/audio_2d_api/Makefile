@@ -17,13 +17,13 @@ LIBS += -lALdc
 #For some reason "-lm" must come after ALdc
 LIBS += -lm -lkosutils
 
-all: rm-elf $(TARGET)
+all: clean $(TARGET)
 
 #Compile for linux
 linux:
 	rm -f $(PROG)
-	gcc -c -I/usr/local/include audio_assist.c -lopenal -lpthread -D_arch_unix
-	gcc -c -I/usr/local/include main.c -lopenal -lpthread -D_arch_unix
+	gcc -c -I/usr/local/include audio_assist.c -lopenal -lpthread
+	gcc -c -I/usr/local/include main.c -lopenal -lpthread
 	gcc -o $(PROG) main.o audio_assist.o -L/usr/local/lib -lopenal -lpthread
 
 # gcc -o $(PROG) -lopenal -lpthread -D_arch_unix main.o audio_assist.o
@@ -32,16 +32,14 @@ linux:
 include $(KOS_BASE)/Makefile.rules
 
 clean:
-	-rm -f $(TARGET) $(OBJS) romdisk.*
+	rm -f $(TARGET) $(OBJS) romdisk.*
 	rm -f *.bin
 	rm -f *.iso
 	rm -f *.cdi
-
-rm-elf:
-	-rm -f $(TARGET) romdisk.*
+	rm -f $(PROG)
 
 cdi: $(TARGET)
-	elf-to-cdi.sh $(PROG)
+	../elf-to-cdi.sh $(PROG)
 
 $(TARGET): $(OBJS) romdisk.o
 	$(KOS_CC) $(CFLAGS) $(LDFLAGS) -o $(TARGET) $(KOS_START) \
