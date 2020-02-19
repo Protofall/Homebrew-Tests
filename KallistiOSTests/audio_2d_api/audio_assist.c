@@ -18,18 +18,14 @@ uint8_t audio_init(){
 
 	al_list_audio_devices(alcGetString(NULL, ALC_DEVICE_SPECIFIER));
 
-	// const ALCchar *defaultDeviceName;
-	// if(!defaultDeviceName){
-	// 	defaultDeviceName = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
-	// }
-	// _al_device = alcOpenDevice(defaultDeviceName);
-	_al_device = alcOpenDevice(NULL);	//Chooses the preferred/default device
+	//Chooses the preferred/default device
+	const ALCchar *defaultDeviceName;
+	defaultDeviceName = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+	_al_device = alcOpenDevice(defaultDeviceName);
 	if(!_al_device){
 		fprintf(stderr, "unable to open default device\n");
 		return 1;
 	}
-
-	// fprintf(stdout, "Device: %s\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
 
 	alGetError();	//This resets the error state
 
