@@ -1,5 +1,72 @@
 #include "audio_assist.h"
 
+
+//----------------------MISC---------------------------//
+
+
+ALboolean audio_test_error(ALCenum * error, char * msg){
+	*error = alGetError();
+	if(*error != AL_NO_ERROR){
+		fprintf(stderr, "ERROR: %s\n", msg);
+		return AL_TRUE;
+	}
+	return AL_FALSE;
+}
+
+static void al_list_audio_devices(const ALCchar *devices){
+	const ALCchar *device = devices, *next = devices + 1;
+	size_t len = 0;
+
+	fprintf(stdout, "Devices list:\n");
+	fprintf(stdout, "----------\n");
+	while(device && *device != '\0' && next && *next != '\0'){
+		fprintf(stdout, "%s\n", device);
+		len = strlen(device);
+		device += (len + 1);
+		next += (len + 2);
+	}
+	fprintf(stdout, "----------\n");
+}
+
+static bool is_big_endian(){
+	int a = 1;
+	return !((char*)&a)[0];
+}
+
+static int convert_to_int(char * buffer, int len){
+	int i = 0;
+	int a = 0;
+	if(!is_big_endian()){
+		for(; i<len; i++){
+			((char*)&a)[i] = buffer[i];
+		}
+	}
+	else{
+		for(; i<len; i++){
+			((char*)&a)[3 - i] = buffer[i];
+		}
+	}
+	return a;
+}
+
+// static void sleep_ms(int milliseconds){
+// #ifdef _WIN32
+// 	Sleep(milliseconds);
+// #else _POSIX_C_SOURCE >= 199309L
+// 	struct timespec ts;
+// 	ts.tv_sec = milliseconds / 1000;
+// 	ts.tv_nsec = (milliseconds % 1000) * 1000000;
+// 	nanosleep(&ts, NULL);
+// #else
+// 	usleep(milliseconds * 1000);
+// #endif
+// 	return;
+// }
+
+
+//----------------------SETUP---------------------------//
+
+
 uint8_t audio_init(){
 	_audio_streamer_source = NULL;
 	_audio_streamer_fp = NULL;
@@ -669,66 +736,3 @@ uint8_t audio_set_source_looping(audio_source_t * source, ALboolean looping){
 	if(audio_test_error(&error, "source looping") == AL_TRUE){return AL_FALSE;}
 	return 0;
 }
-
-
-//----------------------MISC---------------------------//
-
-
-ALboolean audio_test_error(ALCenum * error, char * msg){
-	*error = alGetError();
-	if(*error != AL_NO_ERROR){
-		fprintf(stderr, "ERROR: %s\n", msg);
-		return AL_TRUE;
-	}
-	return AL_FALSE;
-}
-
-static void al_list_audio_devices(const ALCchar *devices){
-	const ALCchar *device = devices, *next = devices + 1;
-	size_t len = 0;
-
-	fprintf(stdout, "Devices list:\n");
-	fprintf(stdout, "----------\n");
-	while(device && *device != '\0' && next && *next != '\0'){
-		fprintf(stdout, "%s\n", device);
-		len = strlen(device);
-		device += (len + 1);
-		next += (len + 2);
-	}
-	fprintf(stdout, "----------\n");
-}
-
-static bool is_big_endian(){
-	int a = 1;
-	return !((char*)&a)[0];
-}
-
-static int convert_to_int(char * buffer, int len){
-	int i = 0;
-	int a = 0;
-	if(!is_big_endian()){
-		for(; i<len; i++){
-			((char*)&a)[i] = buffer[i];
-		}
-	}
-	else{
-		for(; i<len; i++){
-			((char*)&a)[3 - i] = buffer[i];
-		}
-	}
-	return a;
-}
-
-// static void sleep_ms(int milliseconds){
-// #ifdef _WIN32
-// 	Sleep(milliseconds);
-// #else _POSIX_C_SOURCE >= 199309L
-// 	struct timespec ts;
-// 	ts.tv_sec = milliseconds / 1000;
-// 	ts.tv_nsec = (milliseconds % 1000) * 1000000;
-// 	nanosleep(&ts, NULL);
-// #else
-// 	usleep(milliseconds * 1000);
-// #endif
-// 	return;
-// }

@@ -91,6 +91,15 @@ audio_info_t*   _audio_streamer_info;
 #define AUDIO_STREAMING_DATA_CHUNK_SIZE (1024 * 64)
 #define WAV_HDR_SIZE 44
 
+//----------------------MISC---------------------------//
+
+
+ALboolean audio_test_error(ALCenum * error, char * msg);
+
+
+//----------------------SETUP---------------------------//
+
+
 uint8_t audio_init();	//Returns 1 if an error occured, 0 otherwise
 void audio_shutdown();
 
@@ -130,18 +139,5 @@ uint8_t audio_adjust_source_volume(audio_source_t * source, float vol);	//adjust
 uint8_t audio_adjust_source_speed(audio_source_t * source, float speed);
 uint8_t audio_set_source_looping(audio_source_t * source, ALboolean looping);
 
-
-//----------------------MISC---------------------------//
-//MAYBE MAKE THESE STATIC?
-
-ALboolean audio_test_error(ALCenum * error, char * msg);
-
-static void al_list_audio_devices(const ALCchar *devices);
-
-static bool is_big_endian();
-
-static int convert_to_int(char * buffer, int len);
-
-// static void sleep_ms(int milliseconds);	//cross-platform sleep function in milliseconds
 
 #endif
