@@ -222,8 +222,7 @@ ALboolean audio_free_info(audio_info_t * info){
 	free(info->buff_id);
 
 	if(info->streaming == AUDIO_STREAMING){
-		// _audio_streamer_source->info = NULL;
-		audio_free_source(_audio_streamer_source);
+		// audio_free_source(_audio_streamer_source);
 		fclose(_audio_streamer_fp);
 		_audio_streamer_fp = NULL;
 		_audio_streamer_info = NULL;
@@ -249,7 +248,7 @@ ALboolean audio_free_source(audio_source_t * source){
 
 		//NOTE: I could add code to wait for the thread to end, but I think its fine to assume it will end on its own
 
-		_audio_streamer_source = NULL;
+		// _audio_streamer_source = NULL;
 	}
 
 	source->info->srcs_attached--;
@@ -606,6 +605,8 @@ void * audio_stream_player(void * args){
 	pthread_mutex_lock(&_audio_streamer_lock);
 	_audio_streamer_thd_active = 0;
 	pthread_mutex_unlock(&_audio_streamer_lock);
+
+	_audio_streamer_source = NULL;
 
 	return 0;
 }

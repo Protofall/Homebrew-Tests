@@ -247,7 +247,7 @@ int main(int argc, char **argv){
 		printf("%s", text);
 		scanf("%19s", input);
 		uint8_t i = 0;
-		while(input[i] != '\0' || input[i] != '\n'){
+		while(input[i] != '\0'){
 			switch(input[i]){
 			case '0':
 				target_source = &sourceMusic;
