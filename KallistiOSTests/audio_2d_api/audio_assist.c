@@ -29,7 +29,7 @@ uint8_t audio_init(){
 		return 1;
 	}
 
-    // fprintf(stdout, "Device: %s\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
+	// fprintf(stdout, "Device: %s\n", alcGetString(device, ALC_DEVICE_SPECIFIER));
 
 	alGetError();	//This resets the error state
 
@@ -595,7 +595,7 @@ void * audio_stream_player(void * args){
 						//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
 		#endif
 
-		// sleep(10);
+		// sleep_ms(10);
 	}
 
 	//Shutdown the system
@@ -681,7 +681,7 @@ uint8_t audio_set_source_looping(audio_source_t * source, ALboolean looping){
 ALboolean audio_test_error(ALCenum * error, char * msg){
 	*error = alGetError();
 	if(*error != AL_NO_ERROR){
-        fprintf(stderr, "ERROR: %s\n", msg);
+		fprintf(stderr, "ERROR: %s\n", msg);
 		return AL_TRUE;
 	}
 	return AL_FALSE;
@@ -722,3 +722,17 @@ static int convert_to_int(char * buffer, int len){
 	}
 	return a;
 }
+
+// static void sleep_ms(int milliseconds){
+// #ifdef _WIN32
+// 	Sleep(milliseconds);
+// #else _POSIX_C_SOURCE >= 199309L
+// 	struct timespec ts;
+// 	ts.tv_sec = milliseconds / 1000;
+// 	ts.tv_nsec = (milliseconds % 1000) * 1000000;
+// 	nanosleep(&ts, NULL);
+// #else
+// 	usleep(milliseconds * 1000);
+// #endif
+// 	return;
+// }

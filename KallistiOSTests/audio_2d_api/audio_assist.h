@@ -22,7 +22,9 @@
 #if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
 	#include <sched.h>
 	#include <pthread.h>
+	#include <time.h>
 #elif defined(_WIN32)
+	#include <windows.h>
 	#error "Windows not supported due to pthreads"
 #endif
 
@@ -140,5 +142,6 @@ static bool is_big_endian();
 
 static int convert_to_int(char * buffer, int len);
 
+// static void sleep_ms(int milliseconds);	//cross-platform sleep function in milliseconds
 
 #endif
