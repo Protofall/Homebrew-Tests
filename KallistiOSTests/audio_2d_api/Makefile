@@ -17,7 +17,7 @@ LIBS += -lALdc
 #For some reason "-lm" must come after ALdc
 LIBS += -lm -lkosutils
 
-all: rm-elf $(TARGET)
+all: clean $(TARGET)
 
 #Compile for linux
 linux:
@@ -37,9 +37,6 @@ clean:
 	rm -f *.iso
 	rm -f *.cdi
 	rm -f $(PROG)
-
-rm-elf:
-	rm -f $(TARGET) romdisk.*
 
 cdi: $(TARGET)
 	../elf-to-cdi.sh $(PROG)

@@ -4,6 +4,8 @@ uint8_t audio_init(){
 	_audio_streamer_source = NULL;
 	_audio_streamer_fp = NULL;
 	_audio_streamer_stopping = 0;
+	_audio_streamer_command = AUDIO_COMMAND_NONE;
+	_audio_streamer_thd_active = 0;
 
 	ALboolean enumeration;
 	ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };	//Double check what these vars mean
@@ -34,30 +36,36 @@ uint8_t audio_init(){
 	_al_context = alcCreateContext(_al_device, NULL);
 	if(!alcMakeContextCurrent(_al_context)){
 		fprintf(stderr, "failed to make default context\n");
-		return 1;
+		goto error1;
 	}
-	if(audio_test_error(&error, "make default context") == AL_TRUE){return 1;}
+	if(audio_test_error(&error, "make default context") == AL_TRUE){goto error1;}
 
 	// set orientation
 	alListener3f(AL_POSITION, 0, 0, 1.0f);
-	if(audio_test_error(&error, "listener position") == AL_TRUE){return 1;}
+	if(audio_test_error(&error, "listener position") == AL_TRUE){goto error2;}
 
 	alListener3f(AL_VELOCITY, 0, 0, 0);
-	if(audio_test_error(&error, "listener velocity") == AL_TRUE){return 1;}
+	if(audio_test_error(&error, "listener velocity") == AL_TRUE){goto error2;}
 
 	alListenerfv(AL_ORIENTATION, listenerOri);
-	if(audio_test_error(&error, "listener orientation") == AL_TRUE){return 1;}
+	if(audio_test_error(&error, "listener orientation") == AL_TRUE){goto error2;}
 
 	// Init the mutex for the streamer thread
 	if(pthread_mutex_init(&_audio_streamer_lock, NULL) != 0){
 		printf("Mutex init failed\n");
-		return 1;
+		goto error2;
 	}
 
-	_audio_streamer_command = AUDIO_COMMAND_NONE;
-	_audio_streamer_thd_active = 0;
-
 	return 0;
+
+	error2:
+	alcMakeContextCurrent(NULL);
+	alcDestroyContext(_al_context);
+
+	error1:
+	alcCloseDevice(_al_device);
+
+	return 1;
 }
 
 void audio_shutdown(){
@@ -204,10 +212,10 @@ ALboolean audio_free_info(audio_info_t * info){
 	free(info->buff_id);
 
 	if(info->streaming == AUDIO_STREAMING){
+		// _audio_streamer_source->info = NULL;
+		audio_free_source(_audio_streamer_source);
 		fclose(_audio_streamer_fp);
 		_audio_streamer_fp = NULL;
-		_audio_streamer_source->info = NULL;
-		audio_free_source(_audio_streamer_source);
 		_audio_streamer_info = NULL;
 	}
 
@@ -448,21 +456,46 @@ ALboolean audio_stop_source(audio_source_t * source){
 	return AL_TRUE;
 }
 
-ALboolean audio_prep_stream_buffers(){
+ALboolean audio_streamer_buffer_fill(ALuint id){
 	ALvoid * data;
+	ALCenum error;
+	data = malloc(AUDIO_STREAMING_DATA_CHUNK_SIZE);
 
-	// Fill all the buffers with audio data from the wave file
-	uint8_t i;
-	for(i = 0; i < _audio_streamer_info->buff_cnt; i++){
-		data = malloc(AUDIO_STREAMING_DATA_CHUNK_SIZE);
-		audio_WAVE_buffer_fill(data);	//data array is filled with song info
-		alBufferData(_audio_streamer_info->buff_id[i], _audio_streamer_source->info->format, data, AUDIO_STREAMING_DATA_CHUNK_SIZE, _audio_streamer_source->info->freq);
+	//data array is filled with song info
+	switch(_audio_streamer_info->data_type){
+	case AUDIO_DATA_TYPE_WAV:
+		audio_WAV_buffer_fill(data);
+		break;
+	// case AUDIO_DATA_TYPE_CDDA:
+	// 	audio_CDDA_buffer_fill(data);
+	// 	break;
+	// case AUDIO_DATA_TYPE_OGG:
+	// 	audio_OGG_buffer_fill(data);
+	// 	break;
+	default:
 		free(data);
-		alSourceQueueBuffers(_audio_streamer_source->src_id, 1, &_audio_streamer_info->buff_id[i]);
+		return AL_FALSE;
 	}
 
-	ALCenum error;
+	alBufferData(id, _audio_streamer_info->format, data, AUDIO_STREAMING_DATA_CHUNK_SIZE, _audio_streamer_info->freq);
+	free(data);
+
 	if(audio_test_error(&error, "loading wav file") == AL_TRUE){return AL_FALSE;}
+	alSourceQueueBuffers(_audio_streamer_source->src_id, 1, &id);	//last parameter is a pointer to an array
+	if(audio_test_error(&error, "queue-ing buffer") == AL_TRUE){return AL_FALSE;}
+
+	return AL_TRUE;
+}
+
+ALboolean audio_prep_stream_buffers(){
+	// Fill all the buffers with audio data from the wave file
+	uint8_t i;
+	ALboolean res;
+	for(i = 0; i < _audio_streamer_info->buff_cnt; i++){
+		res = audio_streamer_buffer_fill(_audio_streamer_source->buff_id[i]);
+		if(res == AL_FALSE){return AL_FALSE;}
+	}
+
 	return AL_TRUE;
 }
 
@@ -474,15 +507,12 @@ void * audio_stream_player(void * args){
 	pthread_mutex_unlock(&_audio_streamer_lock);
 
 	//Queue up all buffers for the source with the beginning of the song
-	if(audio_prep_stream_buffers() == AL_FALSE){return NULL;}	//Currently only works for WAV files
+	if(audio_prep_stream_buffers() == AL_FALSE){_audio_streamer_thd_active = 0; return NULL;}
 
 	uint8_t command;
- 	ALvoid *data;
 
-	ALint iBuffersProcessed;
+	ALint iBuffersProcessed = 0;
 	ALuint uiBuffer;
-	// Buffer queuing loop must operate in a new thread
-	iBuffersProcessed = 0;
 
 	//Different play states
 	// AL_STOPPED
@@ -496,8 +526,6 @@ void * audio_stream_player(void * args){
 	// will resume from the position the source was when it was paused and
 	// calling alSourcePlay after stopping will resume from the beginning of
 	// the buffer(s).
-
-	//Normally when the attached buffers are done playing, the source will progress to the stopped state
 
 	while(1){
 		pthread_mutex_lock(&_audio_streamer_lock);
@@ -513,6 +541,9 @@ void * audio_stream_player(void * args){
 				alSourceStop(_audio_streamer_source->src_id);
 				fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);
 			}
+			//Commented line doesn't appear to do anything differently
+			// alSourcef(_audio_streamer_source->src_id, AL_BYTE_OFFSET, 0);	//Should force it to start from the beginning
+			
 			alSourcePlay(_audio_streamer_source->src_id);
 			_audio_streamer_stopping = 0;
 		}
@@ -537,18 +568,10 @@ void * audio_stream_player(void * args){
 		while(iBuffersProcessed && !_audio_streamer_stopping){
 			// Remove the buffer from the queue (uiBuffer contains the buffer ID for the dequeued buffer)
 			//The unqueue operation will only take place if all n (1) buffers can be removed from the queue.
-			//Thats why we do it one at a time
 			uiBuffer = 0;
 			alSourceUnqueueBuffers(_audio_streamer_source->src_id, 1, &uiBuffer);
 
-			// Read more pData audio data (if there is any)
-			data = malloc(AUDIO_STREAMING_DATA_CHUNK_SIZE);
-			audio_WAVE_buffer_fill(data);
-			// Copy audio data to buffer
-			alBufferData(uiBuffer, _audio_streamer_source->info->format, data, AUDIO_STREAMING_DATA_CHUNK_SIZE, _audio_streamer_source->info->freq);
-			free(data);
-			// Insert the audio buffer to the source queue
-			alSourceQueueBuffers(_audio_streamer_source->src_id, 1, &uiBuffer);
+			audio_streamer_buffer_fill(uiBuffer);
 
 			iBuffersProcessed--;
 		}
@@ -562,11 +585,12 @@ void * audio_stream_player(void * args){
 			sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
 						//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
 		#endif
+
+		// sleep(10);
 	}
 
 	//Shutdown the system
 	audio_stop_source(_audio_streamer_source);	//This will de-queue all of the queue-d buffers
-	fclose(_audio_streamer_fp);
 
 	//Tell the world we're done
 	pthread_mutex_lock(&_audio_streamer_lock);
@@ -576,7 +600,7 @@ void * audio_stream_player(void * args){
 	return 0;
 }
 
-void audio_WAVE_buffer_fill(ALvoid * data){
+void audio_WAV_buffer_fill(ALvoid * data){
 	int spare = (_audio_streamer_source->info->size + WAV_HDR_SIZE) - ftell(_audio_streamer_fp);	//This is how much data in the entire file
 	int read = fread(data, 1, MIN(AUDIO_STREAMING_DATA_CHUNK_SIZE, spare), _audio_streamer_fp);
 	if(read < AUDIO_STREAMING_DATA_CHUNK_SIZE){
@@ -592,6 +616,10 @@ void audio_WAVE_buffer_fill(ALvoid * data){
 }
 
 void audio_CDDA_buffer_fill(ALvoid * data){
+	;
+}
+
+void audio_OGG_buffer_fill(ALvoid * data){
 	;
 }
 

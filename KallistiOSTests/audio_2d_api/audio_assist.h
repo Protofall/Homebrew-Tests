@@ -19,6 +19,16 @@
 	} vec2_f_t;
 // #endif
 
+#if defined(_arch_unix)
+#define __linux__
+#define __unix__
+#define __APPLE__
+#endif
+
+#if defined(_arch_win)
+#define _WIN32
+#endif
+
 #if defined(_arch_unix) || defined(_arch_dreamcast)
 	#include <sched.h>
 	#include <pthread.h>
@@ -118,13 +128,17 @@ ALboolean audio_unpause_source(audio_source_t * source);	//If pause it will resu
 ALboolean audio_stop_source(audio_source_t * source);	//Next time we run "play" it will resume from the beginning of the song/sfx
 															//Note: Stopping a streaming source will terminate the `audio_stream_player()` call its in
 
+ALboolean audio_streamer_buffer_fill(ALuint id);
 ALboolean audio_prep_stream_buffers();
 void * audio_stream_player(void * args);	//This function is called by a pthread
 
-void audio_WAVE_buffer_fill(ALvoid * data);
+void audio_WAV_buffer_fill(ALvoid * data);
 void audio_CDDA_buffer_fill(ALvoid * data);
+void audio_OGG_buffer_fill(ALvoid * data);
+
 
 //----------------------ADJUSTMENT---------------------//
+
 
 uint8_t audio_adjust_master_volume(float vol);	//adjust's listener's gain
 uint8_t audio_adjust_source_volume(audio_source_t * source, float vol);	//adjust's source's gain

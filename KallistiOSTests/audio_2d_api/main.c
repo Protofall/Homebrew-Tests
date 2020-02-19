@@ -247,39 +247,40 @@ int main(int argc, char **argv){
 		printf("%s", text);
 		scanf("%19s", input);
 		uint8_t i = 0;
-		while(input[i] != '\0'){
+		while(input[i] != '\0' || input[i] != '\n'){
 			switch(input[i]){
-			case 0:
+			case '0':
 				target_source = &sourceMusic;
 				break;
-			case 1:
+			case '1':
 				target_source = &sourceFX1;
 				break;
-			case 2:
+			case '2':
 				target_source = &sourceFX2;
 				break;
-			case 3:
+			case '3':
 				target_cmd = 0;
 				break;
-			case 4:
+			case '4':
 				target_cmd = 1;
 				break;
-			case 5:
+			case '5':
 				target_cmd = 2;
 				break;
-			case 6:
+			case '6':
 				target_cmd = 3;
 				break;
-			case 7:
+			case '7':
 				play = 0;
 				break;
 			}
+			i++;
 		}
 
-		if(target_cmd == 0){audio_play_source(&sourceMusic);}
-		else if(target_cmd == 1){audio_stop_source(&sourceMusic);}
-		else if(target_cmd == 2){audio_pause_source(&sourceMusic);}
-		else if(target_cmd == 3){audio_unpause_source(&sourceMusic);}
+		if(target_cmd == 0){audio_play_source(target_source);}
+		else if(target_cmd == 1){audio_stop_source(target_source);}
+		else if(target_cmd == 2){audio_pause_source(target_source);}
+		else if(target_cmd == 3){audio_unpause_source(target_source);}
 
 		#endif
 
