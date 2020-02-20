@@ -26,17 +26,22 @@ linux:
 	gcc -c -I/usr/local/include main.c -lopenal -lpthread
 	gcc -o $(PROG) main.o audio_assist.o -L/usr/local/lib -lopenal -lpthread
 
-# gcc -o $(PROG) -lopenal -lpthread -D_arch_unix main.o audio_assist.o
-
+linux-mojoal:
+	rm -f $(PROG)
+	gcc -c -I/usr/include/SDL2 mojoal.c -lSDL2
+	gcc -c -ImojoAL audio_assist.c -lpthread
+	gcc -c -ImojoAL main.c -lpthread
+	gcc -o $(PROG) main.o audio_assist.o mojoal.o -L/usr/local/lib -lpthread -lSDL2
 
 include $(KOS_BASE)/Makefile.rules
 
 clean:
-	rm -f $(TARGET) $(OBJS) romdisk.*
+	rm -f $(TARGET) romdisk.*
 	rm -f *.bin
 	rm -f *.iso
 	rm -f *.cdi
 	rm -f $(PROG)
+	rm -f *.o
 
 cdi: $(TARGET)
 	../elf-to-cdi.sh $(PROG)
