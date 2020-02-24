@@ -20,7 +20,7 @@
 // #endif
 
 #if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
-	#include <sched.h>
+	// #include <sched.h>
 	#include <pthread.h>
 	#include <time.h>
 #elif defined(_WIN32)

@@ -49,19 +49,19 @@ static int convert_to_int(char * buffer, int len){
 	return a;
 }
 
-// static void sleep_ms(int milliseconds){
-// #ifdef _WIN32
-// 	Sleep(milliseconds);
-// #else _POSIX_C_SOURCE >= 199309L
-// 	struct timespec ts;
-// 	ts.tv_sec = milliseconds / 1000;
-// 	ts.tv_nsec = (milliseconds % 1000) * 1000000;
-// 	nanosleep(&ts, NULL);
-// #else
-// 	usleep(milliseconds * 1000);
-// #endif
-// 	return;
-// }
+static void sleep_ms(int milliseconds){
+#ifdef _WIN32
+	Sleep(milliseconds);
+#elif _POSIX_C_SOURCE >= 199309L
+	struct timespec ts;
+	ts.tv_sec = milliseconds / 1000;
+	ts.tv_nsec = (milliseconds % 1000) * 1000000;
+	nanosleep(&ts, NULL);
+#else
+	usleep(milliseconds * 1000);
+#endif
+	return;
+}
 
 
 //----------------------SETUP---------------------------//
@@ -586,6 +586,8 @@ void * audio_stream_player(void * args){
 	ALint iBuffersProcessed = 0;
 	ALuint uiBuffer;
 
+	int sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000;
+
 	//Different play states
 	// AL_STOPPED
 	// AL_PLAYING
@@ -650,15 +652,16 @@ void * audio_stream_player(void * args){
 
 		//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
 		//we should process them
-		#if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
-			sched_yield();
-		#endif
-		#ifdef _WIN32
-			sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
-						//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
-		#endif
+		// #if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
+		// 	sched_yield();
+		// #endif
+		// #ifdef _WIN32
+		// 	Sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
+		// 				//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
+		// #endif
 
-		// sleep_ms(10);
+		//Might be an issue for higher frequency audio, but right now this works
+		sleep_ms(sleep_time);
 	}
 
 	//Shutdown the system
