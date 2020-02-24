@@ -183,9 +183,9 @@ int main(int argc, char **argv){
 	char input[20];
 	char text[200];
 	#if defined(_arch_dreamcast)
-	sprintf(text, "Commands.\nSourceMusic [UP]\nSourceFX1 [LEFT]\nSourceFX2 [RIGHT]\nPlay [A]\nStop [B]\nPause [X]\nUnpause [Y]\nExit [START]\n");
+	sprintf(text, "Commands.\n[UP] SourceMusic\n[LEFT] SourceFX1\n[RIGHT] SourceFX2\n[A] Play\n[B] Stop\n[X] Pause\n[Y] Unpause\n[START] Exit\n");
 	#else
-	sprintf(text, "Commands.\nSourceMusic [0]\nSourceFX1 [1]\nSourceFX2 [2]\nPlay [3]\nStop [4]\nPause [5]\nUnpause [6]\nExit [7]\n");
+	sprintf(text, "Commands.\n[0] SourceMusic\n[1] SourceFX1\n[2] SourceFX2\n[3] Play\n[4] Stop\n[5] Pause\n[6] Unpause\n[7] Exit\n");
 	#endif
 
 	audio_source_t * target_source = &sourceMusic;
@@ -281,6 +281,8 @@ int main(int argc, char **argv){
 		else if(target_cmd == 1){audio_stop_source(target_source);}
 		else if(target_cmd == 2){audio_pause_source(target_source);}
 		else if(target_cmd == 3){audio_unpause_source(target_source);}
+
+		printf("\nBuffers unqueued at once:%d\n0: %d\n1: %d\n2: %d\n3: %d\n4: %d\n", AUDIO_ERROR[0], AUDIO_ERROR[1], AUDIO_ERROR[2], AUDIO_ERROR[3], AUDIO_ERROR[4]);
 
 		#endif
 

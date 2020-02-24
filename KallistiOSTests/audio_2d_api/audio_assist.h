@@ -31,6 +31,9 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
+//Used for debugging. Currently it shows the number of times we had i buffers to process
+uint32_t AUDIO_ERROR[5];
+
 #define AUDIO_NOT_STREAMING 0
 #define AUDIO_STREAMING 1
 

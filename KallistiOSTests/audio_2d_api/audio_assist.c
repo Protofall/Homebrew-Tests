@@ -74,6 +74,12 @@ uint8_t audio_init(){
 	_audio_streamer_command = AUDIO_COMMAND_NONE;
 	_audio_streamer_thd_active = 0;
 
+	AUDIO_ERROR[0] = 0;
+	AUDIO_ERROR[1] = 0;
+	AUDIO_ERROR[2] = 0;
+	AUDIO_ERROR[3] = 0;
+	AUDIO_ERROR[4] = 0;
+
 	ALboolean enumeration;
 	ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };	//Double check what these vars mean
 	ALCenum error;
@@ -586,7 +592,12 @@ void * audio_stream_player(void * args){
 	ALint iBuffersProcessed = 0;
 	ALuint uiBuffer;
 
-	int sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000;
+	ALfloat speed, new_speed;
+	alGetSourcef(source->src_id, AL_PITCH, &speed);
+	new_speed = speed;
+
+	//NOTE: This doesn't really account for playback speed very well
+	int sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
 
 	//Different play states
 	// AL_STOPPED
@@ -608,6 +619,13 @@ void * audio_stream_player(void * args){
 		pthread_mutex_unlock(&_audio_streamer_lock);
 
 		audio_update_source_state(_audio_streamer_source);
+
+		//If the user changed the playback speed, we'll update our sleep time
+		alGetSourcef(source->src_id, AL_PITCH, &new_speed);
+		if(new_speed != speed){
+			sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
+			speed = new_speed;
+		}
 
 		if(command > AUDIO_COMMAND_END){command = AUDIO_COMMAND_NONE;}	//Invalid command given
 		else if(command == AUDIO_COMMAND_PLAY || command == AUDIO_COMMAND_UNPAUSE){
@@ -636,6 +654,11 @@ void * audio_stream_player(void * args){
 		// Buffer queuing loop must operate in a new thread
 		iBuffersProcessed = 0;
 		alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
+
+		//Should always be true
+		if(iBuffersProcessed <= 4){
+			AUDIO_ERROR[iBuffersProcessed]++;
+		}
 
 		// For each processed buffer, remove it from the source queue, read the next chunk of
 		// audio data from the file, fill the buffer with new data, and add it to the source queue
