@@ -282,7 +282,7 @@ int main(int argc, char **argv){
 		else if(target_cmd == 2){audio_pause_source(target_source);}
 		else if(target_cmd == 3){audio_unpause_source(target_source);}
 
-		printf("\nBuffers unqueued at once:%d\n0: %d\n1: %d\n2: %d\n3: %d\n4: %d\n", AUDIO_ERROR[0], AUDIO_ERROR[1], AUDIO_ERROR[2], AUDIO_ERROR[3], AUDIO_ERROR[4]);
+		printf("\nBuffers unqueued at once:\n0: %d\n1: %d\n2: %d\n3: %d\n4: %d\n", AUDIO_ERROR[0], AUDIO_ERROR[1], AUDIO_ERROR[2], AUDIO_ERROR[3], AUDIO_ERROR[4]);
 
 		#endif
 

@@ -593,7 +593,7 @@ void * audio_stream_player(void * args){
 	ALuint uiBuffer;
 
 	ALfloat speed, new_speed;
-	alGetSourcef(source->src_id, AL_PITCH, &speed);
+	alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &speed);
 	new_speed = speed;
 
 	//NOTE: This doesn't really account for playback speed very well
@@ -621,7 +621,7 @@ void * audio_stream_player(void * args){
 		audio_update_source_state(_audio_streamer_source);
 
 		//If the user changed the playback speed, we'll update our sleep time
-		alGetSourcef(source->src_id, AL_PITCH, &new_speed);
+		alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &new_speed);
 		if(new_speed != speed){
 			sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
 			speed = new_speed;
