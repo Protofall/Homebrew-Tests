@@ -675,16 +675,16 @@ void * audio_stream_player(void * args){
 
 		//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
 		//we should process them
-		// #if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
-		// 	sched_yield();
-		// #endif
-		// #ifdef _WIN32
-		// 	Sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
-		// 				//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
-		// #endif
+		#if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
+			sched_yield();
+		#endif
+		#ifdef _WIN32
+			Sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
+						//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
+		#endif
 
 		//Might be an issue for higher frequency audio, but right now this works
-		sleep_ms(sleep_time);
+		// sleep_ms(sleep_time);
 	}
 
 	//Shutdown the system
