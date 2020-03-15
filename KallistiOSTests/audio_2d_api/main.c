@@ -142,7 +142,6 @@ void draw_string(float x, float y, float z, uint8_t a, uint8_t r, uint8_t g, uin
 int main(int argc, char **argv){
 	//Initialise OpenAL and the listener
 	if(audio_init() != 0){return -1;}
-	printf("HELLO2!\n");
 
 	#ifdef _arch_dreamcast
 	pvr_init_defaults();	//Init kos
@@ -187,6 +186,8 @@ int main(int argc, char **argv){
 	#else
 	sprintf(text, "Commands.\n[0] SourceMusic\n[1] SourceFX1\n[2] SourceFX2\n[3] Play\n[4] Stop\n[5] Pause\n[6] Unpause\n[7] Exit\n");
 	#endif
+
+	uint8_t i;
 
 	audio_source_t * target_source = &sourceMusic;
 	int8_t target_cmd = -1;
@@ -282,7 +283,10 @@ int main(int argc, char **argv){
 		else if(target_cmd == 2){audio_pause_source(target_source);}
 		else if(target_cmd == 3){audio_unpause_source(target_source);}
 
-		printf("\nBuffers unqueued at once:\n0: %d\n1: %d\n2: %d\n3: %d\n4: %d\n", AUDIO_ERROR[0], AUDIO_ERROR[1], AUDIO_ERROR[2], AUDIO_ERROR[3], AUDIO_ERROR[4]);
+		printf("\nBuffers unqueued at once:\n");
+		for(i = 0; i <= AUDIO_STREAMING_NUM_BUFFERS; i++){
+			printf("%d: %d\n", i, AUDIO_ERROR[i]);
+		}
 
 		#endif
 

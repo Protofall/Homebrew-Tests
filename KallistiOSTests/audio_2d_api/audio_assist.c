@@ -74,11 +74,10 @@ uint8_t audio_init(){
 	_audio_streamer_command = AUDIO_COMMAND_NONE;
 	_audio_streamer_thd_active = 0;
 
-	AUDIO_ERROR[0] = 0;
-	AUDIO_ERROR[1] = 0;
-	AUDIO_ERROR[2] = 0;
-	AUDIO_ERROR[3] = 0;
-	AUDIO_ERROR[4] = 0;
+	uint8_t DELETE_ME;
+	for(DELETE_ME = 0; DELETE_ME <= AUDIO_STREAMING_NUM_BUFFERS; DELETE_ME++){
+		AUDIO_ERROR[DELETE_ME] = 0;
+	}
 
 	ALboolean enumeration;
 	ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };	//Double check what these vars mean
@@ -656,8 +655,11 @@ void * audio_stream_player(void * args){
 		alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
 
 		//Should always be true
-		if(iBuffersProcessed <= 4){
+		if(iBuffersProcessed < AUDIO_STREAMING_NUM_BUFFERS){
 			AUDIO_ERROR[iBuffersProcessed]++;
+		}
+		else{
+			printf("invalid %d\n", iBuffersProcessed);
 		}
 
 		// For each processed buffer, remove it from the source queue, read the next chunk of
@@ -675,16 +677,16 @@ void * audio_stream_player(void * args){
 
 		//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
 		//we should process them
-		#if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
-			sched_yield();
-		#endif
-		#ifdef _WIN32
-			Sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
-						//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
-		#endif
+		// #if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
+		// 	sched_yield();
+		// #endif
+		// #ifdef _WIN32
+		// 	Sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
+		// 				//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
+		// #endif
 
 		//Might be an issue for higher frequency audio, but right now this works
-		// sleep_ms(sleep_time);
+		sleep_ms(sleep_time);
 	}
 
 	//Shutdown the system

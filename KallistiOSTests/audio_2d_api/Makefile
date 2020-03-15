@@ -28,7 +28,7 @@ linux:
 
 linux-mojoal:
 	rm -f $(PROG)
-	gcc -c -I/usr/include/SDL2 mojoal.c -lSDL2
+	gcc -c -I/usr/include/SDL2 -ImojoAL mojoal.c -lSDL2
 	gcc -c -ImojoAL audio_assist.c -lpthread
 	gcc -c -ImojoAL main.c -lpthread
 	gcc -o $(PROG) main.o audio_assist.o mojoal.o -L/usr/local/lib -lpthread -lSDL2
