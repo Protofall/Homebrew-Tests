@@ -74,10 +74,10 @@ uint8_t audio_init(){
 	_audio_streamer_command = AUDIO_COMMAND_NONE;
 	_audio_streamer_thd_active = 0;
 
-	uint8_t DELETE_ME;
-	for(DELETE_ME = 0; DELETE_ME <= AUDIO_STREAMING_NUM_BUFFERS; DELETE_ME++){
-		AUDIO_ERROR[DELETE_ME] = 0;
-	}
+	// uint8_t DELETE_ME;
+	// for(DELETE_ME = 0; DELETE_ME <= AUDIO_STREAMING_NUM_BUFFERS; DELETE_ME++){
+	// 	AUDIO_ERROR[DELETE_ME] = 0;
+	// }
 
 	ALboolean enumeration;
 	ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };	//Double check what these vars mean
@@ -591,12 +591,15 @@ void * audio_stream_player(void * args){
 	ALint iBuffersProcessed = 0;
 	ALuint uiBuffer;
 
-	ALfloat speed, new_speed;
-	alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &speed);
-	new_speed = speed;
+	uint8_t starting = 0;
+	uint8_t stopping = 0;
+
+	// ALfloat speed, new_speed;
+	// alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &speed);
+	// new_speed = speed;
 
 	//NOTE: This doesn't really account for playback speed very well
-	int sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
+	// int sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
 
 	//Different play states
 	// AL_STOPPED
@@ -617,14 +620,15 @@ void * audio_stream_player(void * args){
 		_audio_streamer_command = AUDIO_COMMAND_NONE;
 		pthread_mutex_unlock(&_audio_streamer_lock);
 
+		//If false then that means the source has been removed before this finished. Its not harmful though
 		audio_update_source_state(_audio_streamer_source);
 
 		//If the user changed the playback speed, we'll update our sleep time
-		alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &new_speed);
-		if(new_speed != speed){
-			sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
-			speed = new_speed;
-		}
+		// alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &new_speed);
+		// if(new_speed != speed){
+		// 	sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
+		// 	speed = new_speed;
+		// }
 
 		if(command > AUDIO_COMMAND_END){command = AUDIO_COMMAND_NONE;}	//Invalid command given
 		else if(command == AUDIO_COMMAND_PLAY || command == AUDIO_COMMAND_UNPAUSE){
@@ -632,11 +636,10 @@ void * audio_stream_player(void * args){
 				alSourceStop(_audio_streamer_source->src_id);
 				fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);
 			}
-			//Commented line doesn't appear to do anything differently
-			// alSourcef(_audio_streamer_source->src_id, AL_BYTE_OFFSET, 0);	//Should force it to start from the beginning
 			
-			alSourcePlay(_audio_streamer_source->src_id);
+			starting = 1;
 			_audio_streamer_stopping = 0;
+			printf("STARTING\n");
 		}
 		else if(command == AUDIO_COMMAND_PAUSE){
 			alSourcePause(_audio_streamer_source->src_id);
@@ -644,49 +647,63 @@ void * audio_stream_player(void * args){
 		else if(command == AUDIO_COMMAND_STOP){	//I feel like this is done poorly, but I can't tell
 			alSourceStop(_audio_streamer_source->src_id);	//All buffers should now be unqueued unless your Nvidia driver sucks
 			fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);	//Reset to beginning
-			// ALint lol;
-			// alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &lol);
-			// if(lol != 4){error_freeze("");}	//Its equal to 4 as expected
+			printf("STOPPING\n");
+			stopping = 1;
 		}
 		else if(command == AUDIO_COMMAND_END){break;}
 
-		// Buffer queuing loop must operate in a new thread
-		iBuffersProcessed = 0;
-		alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
+		//So we don't waste time doing stuff when stopped
+		if(_audio_streamer_source->state == AL_PLAYING || _audio_streamer_source->state != AL_STREAMING ||
+			starting || stopping){
+			printf("I AM CHECKING THE PROCESSED BUFFERS\n");
 
-		//Should always be true
-		if(iBuffersProcessed < AUDIO_STREAMING_NUM_BUFFERS){
-			AUDIO_ERROR[iBuffersProcessed]++;
+			// Buffer queuing loop must operate in a new thread
+			iBuffersProcessed = 0;
+			alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
+
+			//Should always be true
+			// if(iBuffersProcessed <= AUDIO_STREAMING_NUM_BUFFERS){
+			// 	AUDIO_ERROR[iBuffersProcessed]++;
+			// }
+			// else{
+			// 	printf("invalid %d\n", iBuffersProcessed);
+			// }
+
+			// For each processed buffer, remove it from the source queue, read the next chunk of
+			// audio data from the file, fill the buffer with new data, and add it to the source queue
+			while(iBuffersProcessed && !_audio_streamer_stopping){
+				printf("I AM ACTUALLY PROCESSING THEM\n");
+				// Remove the buffer from the queue (uiBuffer contains the buffer ID for the dequeued buffer)
+				//The unqueue operation will only take place if all n (1) buffers can be removed from the queue.
+				uiBuffer = 0;
+				alSourceUnqueueBuffers(_audio_streamer_source->src_id, 1, &uiBuffer);
+
+				audio_streamer_buffer_fill(uiBuffer);
+
+				iBuffersProcessed--;
+			}
 		}
-		else{
-			printf("invalid %d\n", iBuffersProcessed);
+
+		if(starting){
+			alSourcePlay(_audio_streamer_source->src_id);
+			starting = 0;
 		}
-
-		// For each processed buffer, remove it from the source queue, read the next chunk of
-		// audio data from the file, fill the buffer with new data, and add it to the source queue
-		while(iBuffersProcessed && !_audio_streamer_stopping){
-			// Remove the buffer from the queue (uiBuffer contains the buffer ID for the dequeued buffer)
-			//The unqueue operation will only take place if all n (1) buffers can be removed from the queue.
-			uiBuffer = 0;
-			alSourceUnqueueBuffers(_audio_streamer_source->src_id, 1, &uiBuffer);
-
-			audio_streamer_buffer_fill(uiBuffer);
-
-			iBuffersProcessed--;
+		if(stopping){
+			stopping = 0;
 		}
 
 		//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
 		//we should process them
-		// #if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
-		// 	sched_yield();
-		// #endif
-		// #ifdef _WIN32
-		// 	Sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
-		// 				//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
-		// #endif
+		#if defined(__APPLE__) || defined(__linux__) || defined(_arch_dreamcast)
+			sched_yield();
+		#endif
+		#ifdef _WIN32
+			Sleep(0);	// https://stackoverflow.com/questions/3727420/significance-of-sleep0
+						//Might want to replace this with something else since the CPU will be at 100% if this is the only active thread
+		#endif
 
 		//Might be an issue for higher frequency audio, but right now this works
-		sleep_ms(sleep_time);
+		// sleep_ms(sleep_time);
 	}
 
 	//Shutdown the system

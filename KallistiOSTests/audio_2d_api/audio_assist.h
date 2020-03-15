@@ -92,7 +92,7 @@ audio_info_t*   _audio_streamer_info;
 #define WAV_HDR_SIZE 44
 
 //Used for debugging. Currently it shows the number of times we had i buffers to process
-uint32_t AUDIO_ERROR[AUDIO_STREAMING_NUM_BUFFERS + 1];
+// uint32_t AUDIO_ERROR[AUDIO_STREAMING_NUM_BUFFERS + 1];
 
 //----------------------MISC---------------------------//
 
