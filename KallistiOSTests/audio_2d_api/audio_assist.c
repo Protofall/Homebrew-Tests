@@ -74,11 +74,6 @@ uint8_t audio_init(){
 	_audio_streamer_command = AUDIO_COMMAND_NONE;
 	_audio_streamer_thd_active = 0;
 
-	// uint8_t DELETE_ME;
-	// for(DELETE_ME = 0; DELETE_ME <= AUDIO_STREAMING_NUM_BUFFERS; DELETE_ME++){
-	// 	AUDIO_ERROR[DELETE_ME] = 0;
-	// }
-
 	ALboolean enumeration;
 	ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };	//Double check what these vars mean
 	ALCenum error;
