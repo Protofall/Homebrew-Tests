@@ -142,7 +142,6 @@ void draw_string(float x, float y, float z, uint8_t a, uint8_t r, uint8_t g, uin
 int main(int argc, char **argv){
 	//Initialise OpenAL and the listener
 	if(audio_init() != 0){return -1;}
-	printf("HELLO2!\n");
 
 	#ifdef _arch_dreamcast
 	pvr_init_defaults();	//Init kos
@@ -173,7 +172,7 @@ int main(int argc, char **argv){
 	if(audio_test_error(&error, "loading wav file") == AL_TRUE){return -1;}
 	
 	//Note last param is ignored for streaming
-	if(audio_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_FALSE, 0.5, 1) == AL_FALSE){return -1;}
+	if(audio_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_TRUE, 0.5, 1) == AL_FALSE){return -1;}
 
 	//Play the sound effect and music
 	// if(audio_play_source(&sourceFX1) == AL_FALSE){return -1;}
@@ -281,8 +280,6 @@ int main(int argc, char **argv){
 		else if(target_cmd == 1){audio_stop_source(target_source);}
 		else if(target_cmd == 2){audio_pause_source(target_source);}
 		else if(target_cmd == 3){audio_unpause_source(target_source);}
-
-		printf("\nBuffers unqueued at once:\n0: %d\n1: %d\n2: %d\n3: %d\n4: %d\n", AUDIO_ERROR[0], AUDIO_ERROR[1], AUDIO_ERROR[2], AUDIO_ERROR[3], AUDIO_ERROR[4]);
 
 		#endif
 

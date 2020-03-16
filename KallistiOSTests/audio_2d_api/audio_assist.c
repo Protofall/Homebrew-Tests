@@ -74,12 +74,6 @@ uint8_t audio_init(){
 	_audio_streamer_command = AUDIO_COMMAND_NONE;
 	_audio_streamer_thd_active = 0;
 
-	AUDIO_ERROR[0] = 0;
-	AUDIO_ERROR[1] = 0;
-	AUDIO_ERROR[2] = 0;
-	AUDIO_ERROR[3] = 0;
-	AUDIO_ERROR[4] = 0;
-
 	ALboolean enumeration;
 	ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };	//Double check what these vars mean
 	ALCenum error;
@@ -592,12 +586,15 @@ void * audio_stream_player(void * args){
 	ALint iBuffersProcessed = 0;
 	ALuint uiBuffer;
 
-	ALfloat speed, new_speed;
-	alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &speed);
-	new_speed = speed;
+	uint8_t starting = 0;
+	uint8_t refresh_buffers = 0;
+
+	// ALfloat speed, new_speed;
+	// alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &speed);
+	// new_speed = speed;
 
 	//NOTE: This doesn't really account for playback speed very well
-	int sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
+	// int sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
 
 	//Different play states
 	// AL_STOPPED
@@ -618,59 +615,91 @@ void * audio_stream_player(void * args){
 		_audio_streamer_command = AUDIO_COMMAND_NONE;
 		pthread_mutex_unlock(&_audio_streamer_lock);
 
-		audio_update_source_state(_audio_streamer_source);
+		//If source update is false then that means the source has been removed before this thread has finished
+		//Its not harmful though since if its false the statement is never entered and we exit when we check the command
+			//Next two conditions basically detect when it naturally stops playing (Non-looping) and it will reset the buffers
+		if(audio_update_source_state(_audio_streamer_source) == AL_TRUE &&
+			_audio_streamer_source->state == AL_STOPPED && _audio_streamer_stopping == 1){
+
+			fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);
+			refresh_buffers = 1;
+			_audio_streamer_stopping = 0;
+		}
 
 		//If the user changed the playback speed, we'll update our sleep time
-		alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &new_speed);
-		if(new_speed != speed){
-			sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
-			speed = new_speed;
-		}
+		// alGetSourcef(_audio_streamer_source->src_id, AL_PITCH, &new_speed);
+		// if(new_speed != speed){
+		// 	sleep_time = (_audio_streamer_info->freq / AUDIO_STREAMING_DATA_CHUNK_SIZE) * 1000 / speed;
+		// 	speed = new_speed;
+		// }
 
 		if(command > AUDIO_COMMAND_END){command = AUDIO_COMMAND_NONE;}	//Invalid command given
 		else if(command == AUDIO_COMMAND_PLAY || command == AUDIO_COMMAND_UNPAUSE){
 			if(_audio_streamer_source->state == AL_PLAYING){	//If we play during playing then we reset
 				alSourceStop(_audio_streamer_source->src_id);
 				fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);
+				refresh_buffers = 1;
+				starting = 1;
 			}
-			//Commented line doesn't appear to do anything differently
-			// alSourcef(_audio_streamer_source->src_id, AL_BYTE_OFFSET, 0);	//Should force it to start from the beginning
+			else{
+				alSourcePlay(_audio_streamer_source->src_id);
+				//Don't need to refresh buffers since they should already be prep-d
+			}
 			
-			alSourcePlay(_audio_streamer_source->src_id);
-			_audio_streamer_stopping = 0;
+			// printf("STARTING\n");
 		}
 		else if(command == AUDIO_COMMAND_PAUSE){
 			alSourcePause(_audio_streamer_source->src_id);
 		}
-		else if(command == AUDIO_COMMAND_STOP){	//I feel like this is done poorly, but I can't tell
+		else if(command == AUDIO_COMMAND_STOP){
 			alSourceStop(_audio_streamer_source->src_id);	//All buffers should now be unqueued unless your Nvidia driver sucks
 			fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);	//Reset to beginning
-			// ALint lol;
-			// alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &lol);
-			// if(lol != 4){error_freeze("");}	//Its equal to 4 as expected
+			refresh_buffers = 1;
+			// printf("STOPPING\n");
 		}
 		else if(command == AUDIO_COMMAND_END){break;}
 
-		// Buffer queuing loop must operate in a new thread
-		iBuffersProcessed = 0;
-		alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
+		// if(_audio_streamer_source->state == AL_PLAYING){printf("STATE: PLAYING\n");}
+		// else if(_audio_streamer_source->state == AL_STOPPED){printf("STATE: STOPPED\n");}
+		// else if(_audio_streamer_source->state == AL_PAUSED){printf("STATE: PAUSED\n");}
+		// else if(_audio_streamer_source->state == AL_STREAMING){printf("STATE: STREAMING\n");}	//Never seem to see these
+		// else if(_audio_streamer_source->state == AL_INITIAL){printf("STATE: INITIAL\n");}
+		// else if(_audio_streamer_source->state == AL_UNDETERMINED){printf("STATE: UNDETERMINED\n");}	//Never seem to see these
+		// else{printf("STATE: Unknown\n");}	//Never seem to see these
 
-		//Should always be true
-		if(iBuffersProcessed <= 4){
-			AUDIO_ERROR[iBuffersProcessed]++;
+		//So we don't waste time doing stuff when stopped
+			//I've never seen the second condition before
+		if(_audio_streamer_source->state == AL_PLAYING || _audio_streamer_source->state == AL_STREAMING ||
+			refresh_buffers){
+			// printf("I AM CHECKING THE PROCESSED BUFFERS\n");
+
+			// Buffer queuing loop must operate in a new thread
+			iBuffersProcessed = 0;
+			alGetSourcei(_audio_streamer_source->src_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
+
+			// if(iBuffersProcessed > 0){
+			// 	printf("I AM ACTUALLY PROCESSING %d BUFFERS\n", iBuffersProcessed);
+			// }
+
+			// For each processed buffer, remove it from the source queue, read the next chunk of
+			// audio data from the file, fill the buffer with new data, and add it to the source queue
+			// But we don't read if we're currently playing, but the audio is ending
+			while(iBuffersProcessed && !_audio_streamer_stopping){
+				// Remove the buffer from the queue (uiBuffer contains the buffer ID for the dequeued buffer)
+				//The unqueue operation will only take place if all n (1) buffers can be removed from the queue.
+				uiBuffer = 0;
+				alSourceUnqueueBuffers(_audio_streamer_source->src_id, 1, &uiBuffer);
+
+				audio_streamer_buffer_fill(uiBuffer);
+
+				iBuffersProcessed--;
+			}
 		}
+		refresh_buffers = 0;
 
-		// For each processed buffer, remove it from the source queue, read the next chunk of
-		// audio data from the file, fill the buffer with new data, and add it to the source queue
-		while(iBuffersProcessed && !_audio_streamer_stopping){
-			// Remove the buffer from the queue (uiBuffer contains the buffer ID for the dequeued buffer)
-			//The unqueue operation will only take place if all n (1) buffers can be removed from the queue.
-			uiBuffer = 0;
-			alSourceUnqueueBuffers(_audio_streamer_source->src_id, 1, &uiBuffer);
-
-			audio_streamer_buffer_fill(uiBuffer);
-
-			iBuffersProcessed--;
+		if(starting){
+			alSourcePlay(_audio_streamer_source->src_id);
+			starting = 0;
 		}
 
 		//All of these will basically tell the thread manager that this thread is done and if any other threads are waiting then
@@ -711,6 +740,7 @@ void audio_WAV_buffer_fill(ALvoid * data){
 		else{	//Fill with zeroes/silence
 			memset(&((char *)data)[read], 0, AUDIO_STREAMING_DATA_CHUNK_SIZE - read);
 			_audio_streamer_stopping = 1;	//It will take a second before the source state goes to stopped
+			//Can't reset the file pointer yet since its kinda used above
 		}
 	}
 }
