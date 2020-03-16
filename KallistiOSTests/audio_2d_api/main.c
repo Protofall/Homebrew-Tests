@@ -187,8 +187,6 @@ int main(int argc, char **argv){
 	sprintf(text, "Commands.\n[0] SourceMusic\n[1] SourceFX1\n[2] SourceFX2\n[3] Play\n[4] Stop\n[5] Pause\n[6] Unpause\n[7] Exit\n");
 	#endif
 
-	uint8_t i;
-
 	audio_source_t * target_source = &sourceMusic;
 	int8_t target_cmd = -1;
 
@@ -282,11 +280,6 @@ int main(int argc, char **argv){
 		else if(target_cmd == 1){audio_stop_source(target_source);}
 		else if(target_cmd == 2){audio_pause_source(target_source);}
 		else if(target_cmd == 3){audio_unpause_source(target_source);}
-
-		// printf("\nBuffers unqueued at once:\n");
-		// for(i = 0; i <= AUDIO_STREAMING_NUM_BUFFERS; i++){
-		// 	printf("%d: %d\n", i, AUDIO_ERROR[i]);
-		// }
 
 		#endif
 
