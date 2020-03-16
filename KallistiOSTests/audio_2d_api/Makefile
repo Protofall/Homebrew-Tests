@@ -20,18 +20,18 @@ LIBS += -lm -lkosutils
 all: clean $(TARGET)
 
 #Compile for linux
-linux:
-	rm -f $(PROG)
+linux-alsoft:
+	rm -f $(PROG)-alsoft
 	gcc -c -I/usr/local/include audio_assist.c -lopenal -lpthread
 	gcc -c -I/usr/local/include main.c -lopenal -lpthread
-	gcc -o $(PROG) main.o audio_assist.o -L/usr/local/lib -lopenal -lpthread
+	gcc -o $(PROG)-alsoft $(OBJS) -L/usr/local/lib -lopenal -lpthread
 
 linux-mojoal:
-	rm -f $(PROG)
-	gcc -c -I/usr/include/SDL2 -ImojoAL mojoal.c -lSDL2
-	gcc -c -ImojoAL audio_assist.c -lpthread
-	gcc -c -ImojoAL main.c -lpthread
-	gcc -o $(PROG) main.o audio_assist.o mojoal.o -L/usr/local/lib -lpthread -lSDL2
+	rm -f $(PROG)-mojoal
+	gcc -c -I/usr/include/SDL2 -IoldMojoAL mojoal.c -lSDL2
+	gcc -c -IoldMojoAL audio_assist.c -lpthread
+	gcc -c -IoldMojoAL main.c -lpthread
+	gcc -o $(PROG)-mojoal $(OBJS) mojoal.o -L/usr/local/lib -lpthread -lSDL2
 
 include $(KOS_BASE)/Makefile.rules
 
@@ -41,6 +41,7 @@ clean:
 	rm -f *.iso
 	rm -f *.cdi
 	rm -f $(PROG)
+	rm -f $(PROG)-*
 	rm -f *.o
 
 cdi: $(TARGET)
