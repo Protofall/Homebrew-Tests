@@ -281,15 +281,20 @@ ALboolean audio_free_info(audio_info_t * info){
 		return AL_FALSE;
 	}
 
-	alDeleteBuffers(info->buff_cnt, info->buff_id);	//1st param is number of buffers
-	free(info->buff_id);
-
 	if(info->streaming == AUDIO_STREAMING){
-		// audio_free_source(_audio_streamer_source);
+		//The sleep time might need adjusting
+		//Loop purpose is to make sure streamer has stopped working before we continue
+		while(_audio_streamer_thd_active){
+			sleep_ms(10);
+		}
+		
 		fclose(_audio_streamer_fp);
 		_audio_streamer_fp = NULL;
 		_audio_streamer_info = NULL;
 	}
+
+	alDeleteBuffers(info->buff_cnt, info->buff_id);	//1st param is number of buffers
+	free(info->buff_id);
 
 	return AL_TRUE;
 }
@@ -299,8 +304,6 @@ ALboolean audio_free_source(audio_source_t * source){
 		return AL_FALSE;
 	}
 
-	alDeleteSources(1, &source->src_id);
-
 	//So we can later know there isn't a streamer presents
 	if(source == _audio_streamer_source){
 		pthread_mutex_lock(&_audio_streamer_lock);
@@ -308,10 +311,9 @@ ALboolean audio_free_source(audio_source_t * source){
 			_audio_streamer_command = AUDIO_COMMAND_END;	//Doesn't matter what we said before, we want it to terminate now
 		}
 		pthread_mutex_unlock(&_audio_streamer_lock);
-
-		//NOTE: I could add code to wait for the thread to end, but I think its fine to assume it will end on its own
-
-		// _audio_streamer_source = NULL;
+	}
+	else{	//Streamer thread will handle this itself
+		alDeleteSources(1, &source->src_id);
 	}
 
 	source->info->srcs_attached--;
@@ -633,8 +635,8 @@ void * audio_stream_player(void * args){
 		// 	speed = new_speed;
 		// }
 
-		if(command > AUDIO_COMMAND_END){command = AUDIO_COMMAND_NONE;}	//Invalid command given
-		else if(command == AUDIO_COMMAND_PLAY || command == AUDIO_COMMAND_UNPAUSE){
+		if(command > AUDIO_COMMAND_END){command = AUDIO_COMMAND_NONE;}
+		if(command == AUDIO_COMMAND_PLAY || command == AUDIO_COMMAND_UNPAUSE){
 			if(_audio_streamer_source->state == AL_PLAYING){	//If we play during playing then we reset
 				alSourceStop(_audio_streamer_source->src_id);
 				fseek(_audio_streamer_fp, WAV_HDR_SIZE, SEEK_SET);
@@ -716,15 +718,20 @@ void * audio_stream_player(void * args){
 		// sleep_ms(sleep_time);
 	}
 
+	//Empty the command
+	_audio_streamer_command = AUDIO_COMMAND_NONE;
+
 	//Shutdown the system
 	audio_stop_source(_audio_streamer_source);	//This will de-queue all of the queue-d buffers
+
+	//Free the source
+	alDeleteSources(1, &_audio_streamer_source->src_id);
 
 	//Tell the world we're done
 	pthread_mutex_lock(&_audio_streamer_lock);
 	_audio_streamer_thd_active = 0;
-	pthread_mutex_unlock(&_audio_streamer_lock);
-
 	_audio_streamer_source = NULL;
+	pthread_mutex_unlock(&_audio_streamer_lock);
 
 	return 0;
 }
