@@ -282,12 +282,16 @@ ALboolean audio_free_info(audio_info_t * info){
 	}
 
 	if(info->streaming == AUDIO_STREAMING){
+		//We haven't tried to free the source yet
+		if(_audio_streamer_thd_active && _audio_streamer_command != AUDIO_COMMAND_END){
+			return AL_FALSE;
+		}
 		//The sleep time might need adjusting
 		//Loop purpose is to make sure streamer has stopped working before we continue
-		while(_audio_streamer_thd_active){
+		while(_audio_streamer_thd_active && _audio_streamer_command == AUDIO_COMMAND_END){
 			sleep_ms(10);
 		}
-		
+
 		fclose(_audio_streamer_fp);
 		_audio_streamer_fp = NULL;
 		_audio_streamer_info = NULL;
