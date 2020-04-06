@@ -722,9 +722,6 @@ void * audio_stream_player(void * args){
 		// sleep_ms(sleep_time);
 	}
 
-	//Empty the command
-	_audio_streamer_command = AUDIO_COMMAND_NONE;
-
 	//Shutdown the system
 	audio_stop_source(_audio_streamer_source);	//This will de-queue all of the queue-d buffers
 
@@ -735,6 +732,7 @@ void * audio_stream_player(void * args){
 	pthread_mutex_lock(&_audio_streamer_lock);
 	_audio_streamer_thd_active = 0;
 	_audio_streamer_source = NULL;
+	_audio_streamer_command = AUDIO_COMMAND_NONE;
 	pthread_mutex_unlock(&_audio_streamer_lock);
 
 	return 0;

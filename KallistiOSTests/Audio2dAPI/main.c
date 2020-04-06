@@ -132,13 +132,6 @@ void draw_string(float x, float y, float z, uint8_t a, uint8_t r, uint8_t g, uin
 
 #endif
 
-
-
-
-
-
-
-
 int main(int argc, char **argv){
 	//Initialise OpenAL and the listener
 	if(audio_init() != 0){return -1;}
@@ -173,10 +166,6 @@ int main(int argc, char **argv){
 	
 	//Note last param is ignored for streaming
 	if(audio_create_source(&sourceMusic, &infoMusic, (vec2_f_t){0,0}, AL_TRUE, 0.5, 1) == AL_FALSE){return -1;}
-
-	//Play the sound effect and music
-	// if(audio_play_source(&sourceFX1) == AL_FALSE){return -1;}
-	// if(audio_play_source(&sourceMusic) == AL_FALSE){return -1;}
 
 	//So the program continues forever
 	char input[20];
