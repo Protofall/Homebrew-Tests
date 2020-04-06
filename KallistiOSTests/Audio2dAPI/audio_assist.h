@@ -79,7 +79,7 @@ ALCdevice * _al_device;
 uint8_t         _audio_streamer_command;	//Should only be accessed with a mutex
 uint8_t         _audio_streamer_thd_active;	//Says if the streamer thread is currently active or not
 uint8_t         _audio_streamer_stopping;	//Only used for non-looping
-pthread_t       _audio_streamer_thd_id;	//Currently unused
+pthread_t       _audio_streamer_thd_id;
 pthread_mutex_t _audio_streamer_lock;	//We lock the streamer command and thd_active vars
 
 FILE*           _audio_streamer_fp;	//If a pointer to the file/data on disc
