@@ -348,7 +348,8 @@ ALboolean audio_create_source(audio_source_t * source, audio_info_t * info, vec2
 	source->info = info;
 	source->position = position;
 	source->looping = looping;
-	source->volume = volume;
+	source->current_volume = volume;
+	source->target_volume = volume;
 	source->speed = speed;
 
 	ALCenum error;

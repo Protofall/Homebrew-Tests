@@ -57,7 +57,8 @@ typedef struct audio_source{
 						//velocity is always zero
 
 	ALboolean looping;
-	float volume;	//Gain
+	float current_volume;	//Current gain
+	float target_volume;	//Target gain
 	float speed;	//Pitch
 
 	ALuint src_id;	//The source it uses
