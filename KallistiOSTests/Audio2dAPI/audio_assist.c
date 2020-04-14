@@ -263,6 +263,11 @@ ALboolean audio_load_CDDA_track_info(uint8_t drive, uint8_t track, audio_info_t 
 		return AL_FALSE;
 	}
 
+	//Delete these later
+	(void)drive;
+	(void)track;
+	(void)info;
+
 	//Fix later
 	return AL_FALSE;
 }
@@ -271,6 +276,10 @@ ALboolean audio_load_OGG_file_info(const char * path, audio_info_t * info, uint8
 	if(mode & AUDIO_STREAMING && (_audio_streamer_source != NULL || _audio_streamer_fp != NULL)){
 		return AL_FALSE;
 	}
+
+	//Delete these later
+	(void)path;
+	(void)info;
 
 	//Fix later
 	return AL_FALSE;
@@ -581,6 +590,8 @@ ALboolean audio_prep_stream_buffers(){
 //Need to fix returns to unalloc memory if need be
 //I won't be checking the return type so it doesn't matter
 void * audio_stream_player(void * args){
+	(void)args;	//This only exists to make the compiler shut up
+
 	pthread_mutex_lock(&_audio_streamer_lock);
 	_audio_streamer_thd_active = 1;
 	pthread_mutex_unlock(&_audio_streamer_lock);
@@ -756,10 +767,12 @@ void audio_WAV_buffer_fill(ALvoid * data){
 }
 
 void audio_CDDA_buffer_fill(ALvoid * data){
+	(ALvoid)data;	//This only exists to make the compiler shut up
 	;
 }
 
 void audio_OGG_buffer_fill(ALvoid * data){
+	(ALvoid)data;	//This only exists to make the compiler shut up
 	;
 }
 
