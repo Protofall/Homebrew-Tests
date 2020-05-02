@@ -31,6 +31,9 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
+//For setting variables as unused for the time being
+#define UNUSED(x) (void)(x)
+
 #define AUDIO_NOT_STREAMING 0
 #define AUDIO_STREAMING 1
 
@@ -88,6 +91,7 @@ audio_source_t*  _audio_streamer_source;	//Is null if none are streaming, otherw
 										//And this contains a pointer to the info struct
 audio_info_t*    _audio_streamer_info;
 
+//1MB of streaming buffer space it seems
 #define AUDIO_STREAMING_NUM_BUFFERS 16	//4 is the bare minimum, but its safer to have more so you don't run out
 #define AUDIO_STREAMING_DATA_CHUNK_SIZE (1024 * 64)
 #define WAV_HDR_SIZE 44

@@ -69,6 +69,7 @@ static void sleep_ms(int milliseconds){
 
 uint8_t audio_init(){
 	_audio_streamer_source = NULL;
+	_audio_streamer_info = NULL;
 	_audio_streamer_fp = NULL;
 	_audio_streamer_stopping = 0;
 	_audio_streamer_command = AUDIO_COMMAND_NONE;
@@ -198,7 +199,9 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 	ALvoid * data;
 	if(info->streaming == AUDIO_NOT_STREAMING){
 		data = (ALvoid*) malloc(info->size * sizeof(char));
-		if(data == NULL){goto error1;}
+		if(data == NULL){
+			goto error1;
+		}
 		fread(data, info->size, sizeof(char), in);
 		fclose(in);
 	}
@@ -219,16 +222,22 @@ ALboolean audio_load_WAV_file_info(const char * filename, audio_info_t * info, u
 	info->srcs_attached = 0;
 	info->buff_cnt = (info->streaming == AUDIO_STREAMING) ? AUDIO_STREAMING_NUM_BUFFERS : 1;
 	info->buff_id = malloc(sizeof(ALuint) * info->buff_cnt);
-	if(info->buff_id == NULL){return AL_FALSE;}
+	if(info->buff_id == NULL){
+		return AL_FALSE;
+	}
 	alGenBuffers(info->buff_cnt, info->buff_id);	//Generating "info->buff_cnt" buffers. 2nd param is a pointer to an array
 													//of ALuint values which will store the names of the new buffers
 													//Seems "buff_id" doesn't actually contain the data?
-	if(audio_test_error(&error, "buffer generation") == AL_TRUE){goto error2;}
+	if(audio_test_error(&error, "buffer generation") == AL_TRUE){
+		goto error2;
+	}
 
 	//Filling the buffer for non-streamers
 	if(info->streaming == AUDIO_NOT_STREAMING){
 		alBufferData(info->buff_id[0], info->format, data, info->size, info->freq);	//Fill the buffer with PCM data
-		if(audio_test_error(&error, "buffer copy") == AL_TRUE){goto error3;}
+		if(audio_test_error(&error, "buffer copy") == AL_TRUE){
+			goto error3;
+		}
 
 		free(data);
 	}
