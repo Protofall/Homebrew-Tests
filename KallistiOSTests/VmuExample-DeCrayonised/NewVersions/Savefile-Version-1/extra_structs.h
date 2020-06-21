@@ -24,16 +24,18 @@ typedef struct my_savefile_var{
 
 //Here's how we represent it now
 	//WARNING. Don't manually modified the pointers. Crayon savefile functions will set them itself
+	//NOTE: static const vars will have a copy in each object file. If you want to only have one copy
+		//just remove the static const and set each var's value in setup_savefile()
 
 uint16_t * var1;
 #define var1_type CRAY_TYPE_UINT16
 #define var1_length 1	//If you want, these length defines could be unsigned int consts.
-const uint16_t var1_default = 0;
+static const uint16_t var1_default = 0;
 
 float * var2;
 #define var2_type CRAY_TYPE_FLOAT
 #define var2_length 1
-const float var2_default = 5.5;
+static const float var2_default = 5.5;
 
 //Now the "other_struct"
 #define var3_length 20
@@ -41,17 +43,17 @@ const float var2_default = 5.5;
 uint8_t * lol[var3_length];
 #define lol_type CRAY_TYPE_UINT8
 #define lol_length 1
-const uint8_t lol_default = 0;
+static const uint8_t lol_default = 0;
 
 int32_t * hi[var3_length];
 #define hi_type CRAY_TYPE_SINT32
 #define hi_length 2
-const int32_t hi_default = -1;
+static const int32_t hi_default = -1;
 
 char * name[var3_length];
 #define name_type CRAY_TYPE_CHAR
 #define name_length 16
-const char name_default = '\0';
+static const char name_default = '\0';
 
 //For those unfamiliar with enum, a value with no assigned number is equal to the previous value plus 1
 //Also you just use the variable name like a const var, not "savefile_version.SF_Initial" or something
@@ -61,6 +63,6 @@ enum savefile_version{
 	sf_latest_plus_one	//DON'T REMOVE
 };
 
-const crayon_savefile_version_t sf_current_version = sf_latest_plus_one - 1;
+static const crayon_savefile_version_t sf_current_version = sf_latest_plus_one - 1;
 
 #endif

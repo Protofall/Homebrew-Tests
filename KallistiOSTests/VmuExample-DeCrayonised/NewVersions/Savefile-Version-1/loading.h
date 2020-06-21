@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdint.h> //For the uintX_t types
 
+#include <kos/fs_romdisk.h> //For romdisk swapping
+
 #if CRAYON_BOOT_MODE == 1
 	//For mounting the sd dir
 	#include <dc/sd.h>
