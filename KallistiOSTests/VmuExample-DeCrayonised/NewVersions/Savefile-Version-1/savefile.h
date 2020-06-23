@@ -46,6 +46,7 @@ typedef struct crayon_savefile_data{
 #define CRAY_TYPE_CHAR   8
 
 #define crayon_savefile_version_t uint16_t	//If you know you won't have many versions, change this to a uint8_t
+											//But don't change it mid way through a project
 
 typedef struct crayon_savefile_history{
 	uint8_t data_type;
@@ -88,7 +89,7 @@ typedef struct crayon_savefile_history{
 //or even use different save files for one game
 typedef struct crayon_savefile_details{
 	crayon_savefile_version_t version;
-	
+
 	crayon_savefile_data_t save_data;
 	size_t save_size;	//Might move this inside the data var
 
@@ -155,10 +156,12 @@ uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t * details, char
 //Default value is just one element because having default arrays (Eg for c-strings) would be too complex in C
 //So instead all elements are set to the value pointed to by default_value
 crayon_savefile_history_t * crayon_savefile_add_variable(crayon_savefile_details_t * details, void * data_ptr,
-	uint8_t data_type, uint16_t length, void * default_value, crayon_savefile_version_t version);
+	uint8_t data_type, uint16_t length, const void * default_value, crayon_savefile_version_t version);
 
-crayon_savefile_history_t * crayon_savefile_remove_variable(crayon_savefile_details_t * details, void * data_ptr,
-	uint8_t data_type, uint8_t remove_command, crayon_savefile_history_t * transfer_var, crayon_savefile_version_t version);
+//Pass in the pointer to the variable node we want to delete
+crayon_savefile_history_t * crayon_savefile_remove_variable(crayon_savefile_details_t * details,
+	crayon_savefile_history_t * target_node, uint8_t remove_command, crayon_savefile_history_t * transfer_var,
+	crayon_savefile_version_t version);
 
 //Once the history is fully constructed, we can then build our actual savefile with this fuction
 void crayon_savefile_solidify(crayon_savefile_details_t * details);

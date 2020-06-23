@@ -228,7 +228,7 @@ uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t * details, char
 }
 
 crayon_savefile_history_t * crayon_savefile_add_variable(crayon_savefile_details_t * details, void * data_ptr,
-	uint8_t data_type, uint16_t length, void * default_value, crayon_savefile_version_t version){
+	uint8_t data_type, uint16_t length, const void * default_value, crayon_savefile_version_t version){
 
 	if(data_type > CRAY_TYPE_CHAR){
 		return NULL;
@@ -298,45 +298,18 @@ crayon_savefile_history_t * crayon_savefile_add_variable(crayon_savefile_details
 	return var;
 }
 
-crayon_savefile_history_t * crayon_savefile_remove_variable(crayon_savefile_details_t * details, void * data_ptr,
-	uint8_t type, uint8_t remove_command, crayon_savefile_history_t * transfer_var, crayon_savefile_version_t version){
+crayon_savefile_history_t * crayon_savefile_remove_variable(crayon_savefile_details_t * details,
+	crayon_savefile_history_t * target_node, uint8_t remove_command, crayon_savefile_history_t * transfer_var,
+	crayon_savefile_version_t version){
 
 	crayon_savefile_history_t * var = details->history;
 	uint8_t found;
 
 	while(var){
-		if(type == var->data_type){
-			switch(type){
-				case CRAY_TYPE_UINT8:
-					if(var->data_ptr.u8 == (uint8_t*)data_ptr){found = 1;}
-					break;
-				case CRAY_TYPE_UINT16:
-					if(var->data_ptr.u16 == (uint16_t*)data_ptr){found = 1;}
-					break;
-				case CRAY_TYPE_UINT32:
-					if(var->data_ptr.u32 == (uint32_t*)data_ptr){found = 1;}
-					break;
-				case CRAY_TYPE_SINT8:
-					if(var->data_ptr.s8 == (int8_t*)data_ptr){found = 1;}
-					break;
-				case CRAY_TYPE_SINT16:
-					if(var->data_ptr.s16 == (int16_t*)data_ptr){found = 1;}
-					break;
-				case CRAY_TYPE_SINT32:
-					if(var->data_ptr.s32 == (int32_t*)data_ptr){found = 1;}
-					break;
-				case CRAY_TYPE_FLOAT:
-					if(var->data_ptr.floats == (float*)data_ptr){found = 1;}
-					break;
-				case CRAY_TYPE_DOUBLE:
-					if(var->data_ptr.doubles == (double*)data_ptr){found = 1;}
-					break;
-				case CRAY_TYPE_CHAR:
-					if(var->data_ptr.chars == (char*)data_ptr){found = 1;}
-				break;
-			}
+		if(var == target_node){
+			found = 1;
+			break;
 		}
-		if(found){break;}
 		var = var->next;
 	}
 

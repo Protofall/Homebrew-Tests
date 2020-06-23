@@ -56,7 +56,7 @@ char * name[var3_length];
 static const char name_default = '\0';
 
 //For those unfamiliar with enum, a value with no assigned number is equal to the previous value plus 1
-//Also you just use the variable name like a const var, not "savefile_version.SF_Initial" or something
+//Also you just use the variable name like a constant, not "savefile_version.sf_initial" or something
 enum savefile_version{
 	sf_initial = 1,
 	//Add new versions here

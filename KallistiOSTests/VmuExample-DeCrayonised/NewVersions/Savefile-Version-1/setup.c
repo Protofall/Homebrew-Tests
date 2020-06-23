@@ -25,12 +25,12 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 	fs_romdisk_unmount("/Save");
 
 	//Now lets construct our history
-	crayon_savefile_add_variable(details, var1, var1_type, var1_length, (void *)(&var1_default), sf_initial);
-	crayon_savefile_add_variable(details, var2, var2_type, var2_length, (void *)(&var2_default), sf_initial);
+	crayon_savefile_add_variable(details, var1, var1_type, var1_length, &var1_default, sf_initial);
+	crayon_savefile_add_variable(details, var2, var2_type, var2_length, &var2_default, sf_initial);
 	for(i = 0; i < var3_length; i++){
-		crayon_savefile_add_variable(details, lol[i], lol_type, lol_length, (void *)(&lol_default), sf_initial);
-		crayon_savefile_add_variable(details, hi[i], hi_type, hi_length, (void *)(&hi_default), sf_initial);
-		crayon_savefile_add_variable(details, name[i], name_type, name_length, (void *)(&name_default), sf_initial);
+		crayon_savefile_add_variable(details, lol[i], lol_type, lol_length, &lol_default, sf_initial);
+		crayon_savefile_add_variable(details, hi[i], hi_type, hi_length, &hi_default, sf_initial);
+		crayon_savefile_add_variable(details, name[i], name_type, name_length, &name_default, sf_initial);
 	}
 
 	//Set the savefile
