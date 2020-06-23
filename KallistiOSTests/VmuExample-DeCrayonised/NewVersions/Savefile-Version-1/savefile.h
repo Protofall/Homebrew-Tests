@@ -28,11 +28,14 @@ typedef struct crayon_savefile_data{
 
 //When you remove a var, these determine how we handle it
 	//0 is forget the old value, all the others combine it with an existing var
+	//5 is to override the value of the dest var with the value of the deleted var
+		//(Good if you want to change a var size)
 #define CRAY_SF_REMOVE_CMD_DEFAULT  0
 #define CRAY_SF_REMOVE_CMD_ADD      1
 #define CRAY_SF_REMOVE_CMD_SUBTRACT 2
 #define CRAY_SF_REMOVE_CMD_MULTIPLY 3
 #define CRAY_SF_REMOVE_CMD_DIVIDE   4
+#define CRAY_SF_REMOVE_CMD_REPLACE  5
 
 //Var types the user passes into functions
 #define CRAY_TYPE_UINT8  0
@@ -129,15 +132,15 @@ uint8_t crayon_savefile_check_for_device(int8_t port, int8_t slot, uint32_t func
 uint16_t crayon_savefile_bytes_to_blocks(size_t bytes);	//Takes a byte count and returns no. blocks needed to save it
 int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t * details);	//Returns the number of blocks your save file will need (Uncompressed)
 
-void crayon_savefile_serialise(crayon_savefile_data_t * sf_data, uint8_t * pkg_data);
-void crayon_savefile_deserialise(crayon_savefile_data_t * sf_data, uint8_t * pkg_data, uint32_t pkg_size);
+void __attribute__((weak)) crayon_savefile_serialise(crayon_savefile_data_t * sf_data, uint8_t * pkg_data);
+void __attribute__((weak)) crayon_savefile_deserialise(crayon_savefile_data_t * sf_data, uint8_t * pkg_data, uint32_t pkg_size);
 
 
 //---------------Both internal and external----------------
 
 
-uint8_t crayon_savefile_get_vmu_bit(uint8_t vmu_bitmap, int8_t save_port, int8_t save_slot);	//Returns boolean
-void crayon_savefile_set_vmu_bit(uint8_t * vmu_bitmap, int8_t save_port, int8_t save_slot);	//Updates vmu_bitmap
+uint8_t crayon_savefile_get_memcard_bit(uint8_t memcard_bitmap, int8_t save_port, int8_t save_slot);	//Returns boolean
+void crayon_savefile_set_memcard_bit(uint8_t * memcard_bitmap, int8_t save_port, int8_t save_slot);	//Updates memcard_bitmap
 
 
 //------------------Called externally----------------------
@@ -146,8 +149,8 @@ void crayon_savefile_set_vmu_bit(uint8_t * vmu_bitmap, int8_t save_port, int8_t 
 	//Also note the return value is 1 when the number of icons is greater than 3. The DC BIOS can't render icons
 	//with 4 or more frames. If you call this AFTER loading an eyecatcher it will override the eyecatch_type variable
 	//with zero. Call init FIRST
-void crayon_savefile_init_savefile_details(crayon_savefile_details_t * details, char * desc_long,
-	char * desc_short, char * app_id, char * save_name, crayon_savefile_version_t version);
+void crayon_savefile_init_savefile_details(crayon_savefile_details_t * details, const char * desc_long,
+	const char * desc_short, const char * app_id, const char * save_name, crayon_savefile_version_t version);
 
 uint8_t crayon_savefile_add_icon(crayon_savefile_details_t * details, char * image, char * palette,
 	uint8_t icon_anim_count, uint16_t icon_anim_speed);

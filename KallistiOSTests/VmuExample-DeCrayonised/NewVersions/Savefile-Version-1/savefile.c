@@ -73,8 +73,7 @@ uint16_t crayon_savefile_bytes_to_blocks(size_t bytes){
 
 //I used the "vmu_pkg_build" function's source as a guide for this. Doesn't work with compressed saves
 int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t * details){
-	int pkg_size, data_len;
-	data_len = details->save_size;
+	unsigned int size;
 	uint16_t eyecatch_size  = 0;
 	switch(details->eyecatch_type){
 		case VMUPKG_EC_NONE:
@@ -90,33 +89,33 @@ int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t * details
 	}
 
 	//Get the total number of bytes. Keep in mind we need to think about the icon/s and EC
-	pkg_size = sizeof(vmu_hdr_t) + (512 * details->icon_anim_count) +
-		eyecatch_size + data_len;
+	size = sizeof(vmu_hdr_t) + (512 * details->icon_anim_count) + eyecatch_size +
+		sizeof(crayon_savefile_version_t) + details->save_size;
 
-	return crayon_savefile_bytes_to_blocks(pkg_size);
+	return crayon_savefile_bytes_to_blocks(size);
 }
 
 //DON'T FORGET THE PKG DATA ALSO CONTAINS THE VERSION NUMBER
-void crayon_savefile_serialise(crayon_savefile_data_t * sf_data, uint8_t * pkg_data){
+void __attribute__((weak)) crayon_savefile_serialise(crayon_savefile_data_t * sf_data, uint8_t * pkg_data){
 	return;
 }
 
-void crayon_savefile_deserialise(crayon_savefile_data_t * sf_data, uint8_t * pkg_data, uint32_t pkg_size){
+void __attribute__((weak)) crayon_savefile_deserialise(crayon_savefile_data_t * sf_data, uint8_t * pkg_data, uint32_t pkg_size){
 	return;
 }
 
-uint8_t crayon_savefile_get_vmu_bit(uint8_t vmu_bitmap, int8_t save_port, int8_t save_slot){
-	return !!(vmu_bitmap & (1 << ((2 - save_slot) + 6 - (2 * save_port))));
+uint8_t crayon_savefile_get_memcard_bit(uint8_t memcard_bitmap, int8_t save_port, int8_t save_slot){
+	return !!(memcard_bitmap & (1 << ((2 - save_slot) + 6 - (2 * save_port))));
 }
 
-void crayon_savefile_set_vmu_bit(uint8_t * vmu_bitmap, int8_t save_port, int8_t save_slot){
-	*vmu_bitmap |= (1 << ((2 - save_slot) + 6 - (2 * save_port)));
+void crayon_savefile_set_memcard_bit(uint8_t * memcard_bitmap, int8_t save_port, int8_t save_slot){
+	*memcard_bitmap |= (1 << ((2 - save_slot) + 6 - (2 * save_port)));
 	return;
 }
 
 //Make sure to call this first (And call the save icon and eyecatcher functions after since this overides them)
-void crayon_savefile_init_savefile_details(crayon_savefile_details_t * details, char * desc_long, char * desc_short,
-	char * app_id, char * save_name, crayon_savefile_version_t version){
+void crayon_savefile_init_savefile_details(crayon_savefile_details_t * details, const char * desc_long,
+	const char * desc_short, const char * app_id, const char * save_name, crayon_savefile_version_t version){
 	details->version = version;
 
 	details->save_data.u8 = NULL;
@@ -422,12 +421,12 @@ void crayon_savefile_update_valid_saves(crayon_savefile_details_t * details, uin
 				//If we have enough space for a new savefile
 				vmu = maple_enum_dev(i, j);
 				if(vmufs_free_blocks(vmu) >= crayon_savefile_get_save_block_count(details)){
-					crayon_savefile_set_vmu_bit(&valid_memcards, i, j);
+					crayon_savefile_set_memcard_bit(&valid_memcards, i, j);
 				}
 			}
 			else{
-				if(get_memcards){crayon_savefile_set_vmu_bit(&valid_memcards, i, j);}
-				if(get_saves){crayon_savefile_set_vmu_bit(&valid_saves, i, j);}
+				if(get_memcards){crayon_savefile_set_memcard_bit(&valid_memcards, i, j);}
+				if(get_saves){crayon_savefile_set_memcard_bit(&valid_saves, i, j);}
 			}
 		}
 	}
@@ -450,7 +449,7 @@ uint8_t crayon_savefile_get_valid_function(uint32_t function){
 			}
 
 			//If we got here, we have a screen
-			crayon_savefile_set_vmu_bit(&valid_function, i, j);
+			crayon_savefile_set_memcard_bit(&valid_function, i, j);
 		}
 	}
 
@@ -504,7 +503,7 @@ uint8_t crayon_savefile_load(crayon_savefile_details_t * details){
 
 uint8_t crayon_savefile_save(crayon_savefile_details_t * details){
 	//The requested VMU is not a valid memory card
-	if(!crayon_savefile_get_vmu_bit(details->valid_memcards, details->save_port, details->save_slot)){
+	if(!crayon_savefile_get_memcard_bit(details->valid_memcards, details->save_port, details->save_slot)){
 		return 1;
 	}
 
@@ -656,7 +655,7 @@ void crayon_vmu_display_icon(uint8_t vmu_bitmap, void * icon){
 	uint8_t i, j;
 	for(i = 0; i <= 3; i++){
 		for(j = 1; j <= 2; j++){
-			if(crayon_savefile_get_vmu_bit(vmu_bitmap, i, j)){	//We want to display on this VMU
+			if(crayon_savefile_get_memcard_bit(vmu_bitmap, i, j)){	//We want to display on this VMU
 				if(!(vmu = maple_enum_dev(i, j))){	//Device not present
 					continue;
 				}

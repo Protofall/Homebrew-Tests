@@ -30,7 +30,7 @@ int main(){
 	int jiter;
 	for(iter = 0; iter <= 3; iter++){
 		for(jiter = 1; jiter <= 2; jiter++){
-			if(crayon_savefile_get_vmu_bit(savefile_details.valid_saves, iter, jiter)){	//Use the left most VMU
+			if(crayon_savefile_get_memcard_bit(savefile_details.valid_saves, iter, jiter)){	//Use the left most VMU
 				savefile_details.save_port = iter;
 				savefile_details.save_slot = jiter;
 				goto Exit_loop_1;
@@ -49,7 +49,7 @@ int main(){
 		if(savefile_details.valid_memcards){
 			for(iter = 0; iter <= 3; iter++){
 				for(jiter = 1; jiter <= 2; jiter++){
-					if(crayon_savefile_get_vmu_bit(savefile_details.valid_memcards, iter, jiter)){	//Use the left most VMU
+					if(crayon_savefile_get_memcard_bit(savefile_details.valid_memcards, iter, jiter)){	//Use the left most VMU
 						savefile_details.save_port = iter;
 						savefile_details.save_slot = jiter;
 						goto Exit_loop_2;
