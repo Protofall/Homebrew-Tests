@@ -1,6 +1,8 @@
 //For the controller and mouse
+#ifdef _arch_dreamcast
 #include <dc/maple.h>
 #include <dc/maple/controller.h>
+#endif
 
 #include "setup.h"
 #include "graphics.h"
@@ -8,52 +10,47 @@
 #define CRAYON_DEBUG 0
 
 int main(){
+	#ifdef _arch_dreamcast
 	#if CRAYON_BOOT_MODE == 1
-		int sdRes = mount_ext2_sd();	//This function should be able to mount an ext2 formatted sd card to the /sd dir	
-		if(sdRes == 0){
-			MS_options.sd_present = 1;
-		}
-		else{
-			return 0;
-		}
+	int sdRes = mount_ext2_sd();	//This function should be able to mount an ext2 formatted sd card to the /sd dir
+	if(sdRes == 0){
+		MS_options.sd_present = 1;
+	}
+	else{
+		return 0;
+	}
+	#endif
 	#endif
 
 	crayon_savefile_details_t savefile_details;
 
 	uint8_t res = setup_savefile(&savefile_details);
 
+	#ifdef _arch_dreamcast
 	pvr_init_defaults();	//Init kos
 	font_init();
+	#endif
 
 	//Find the first savefile (if it exists)
-	int iter;
-	int jiter;
-	for(iter = 0; iter <= 3; iter++){
-		for(jiter = 1; jiter <= 2; jiter++){
-			if(crayon_savefile_get_memcard_bit(savefile_details.valid_saves, iter, jiter)){	//Use the left most VMU
-				savefile_details.save_port = iter;
-				savefile_details.save_slot = jiter;
-				goto Exit_loop_1;
-			}
+	uint8_t iter;
+	for(iter = 0; iter < CRAY_SF_NUM_SAVE_DEVICES; iter++){
+		if(crayon_savefile_get_memcard_bit(savefile_details.valid_saves, iter)){	//Use the left most VMU
+			savefile_details.save_device_id = iter;
+			break;
 		}
 	}
-	Exit_loop_1:
 
 	//Try and load savefile
-	crayon_savefile_load(&savefile_details);
+	crayon_savefile_load_savedata(&savefile_details);
 
 	//No savefile yet
-	if(savefile_details.valid_memcards && savefile_details.save_port == -1 &&
-		savefile_details.save_slot == -1){
+	if(savefile_details.valid_memcards && savefile_details.save_device_id == -1){
 		//If we don't already have a savefile, choose a VMU
 		if(savefile_details.valid_memcards){
-			for(iter = 0; iter <= 3; iter++){
-				for(jiter = 1; jiter <= 2; jiter++){
-					if(crayon_savefile_get_memcard_bit(savefile_details.valid_memcards, iter, jiter)){	//Use the left most VMU
-						savefile_details.save_port = iter;
-						savefile_details.save_slot = jiter;
-						goto Exit_loop_2;
-					}
+			for(iter = 0; iter < CRAY_SF_NUM_SAVE_DEVICES; iter++){
+				if(crayon_savefile_get_memcard_bit(savefile_details.valid_memcards, iter)){	//Use the left most VMU
+					savefile_details.save_device_id = iter;
+					goto Exit_loop_2;
 				}
 			}
 		}
@@ -63,12 +60,14 @@ int main(){
 
 	uint16_t save_res = 0;
 	if(savefile_details.valid_memcards){
-		save_res = crayon_savefile_save(&savefile_details);
+		save_res = crayon_savefile_save_savedata(&savefile_details);
 		crayon_savefile_update_valid_saves(&savefile_details, CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT);	//Updating the save
 	}
 
+	#ifdef _arch_dreamcast
 	#if CRAYON_BOOT_MODE == 1
 		unmount_ext2_sd();	//Unmounts the SD dir to prevent corruption since we won't need it anymore
+	#endif
 	#endif
 
 	char buffer[70];
@@ -81,6 +80,7 @@ int main(){
 		sprintf(buffer, "It failed with code %d", res);
 	}
 
+	#ifdef _arch_dreamcast
 	uint8_t end = 0;
 	while(!end){
 		pvr_wait_ready();
@@ -114,9 +114,17 @@ int main(){
 
 		pvr_scene_finish();
 	}
+	#else
+	char buffer2[32];
+	sprintf(buffer2, "save_res: %d\n", save_res);
+	draw_string(0, 0, 0, 0, 0, 0, 0, buffer, 0, 0);
+	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
+	#endif
 
 	crayon_savefile_free(&savefile_details);
+	#ifdef _arch_dreamcast
 	pvr_mem_free(font_tex);
+	#endif
 
 	return 0;
 }

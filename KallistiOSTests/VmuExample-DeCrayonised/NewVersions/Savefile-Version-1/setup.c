@@ -2,9 +2,13 @@
 
 uint8_t setup_savefile(crayon_savefile_details_t * details){
 	uint8_t i;
-	crayon_savefile_init_savefile_details(details, "Crayon's VMU demo\0", "Save Demo\0",
-		"ProtoSaveDemo3\0", "SAVE_DEMO3.s\0", sf_current_version);
-	
+	crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", sf_current_version);
+	crayon_savefile_set_app_id(details, "ProtoSaveDemo3");
+	crayon_savefile_set_short_desc(details, "Save Demo");
+	crayon_savefile_set_long_desc(details, "Crayon's VMU demo");
+
+	#ifdef _arch_dreamcast
+
 	//Load the VMU icon data
 	#if CRAYON_BOOT_MODE == 1
 		crayon_memory_mount_romdisk("/sd/sf_icon.img", "/Save");
@@ -24,13 +28,15 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 
 	fs_romdisk_unmount("/Save");
 
+	#endif
+
 	//Now lets construct our history
-	crayon_savefile_add_variable(details, var1, var1_type, var1_length, &var1_default, sf_initial);
-	crayon_savefile_add_variable(details, var2, var2_type, var2_length, &var2_default, sf_initial);
+	crayon_savefile_add_variable(details, (void**)&var1, var1_type, var1_length, &var1_default, sf_initial);
+	crayon_savefile_add_variable(details, (void**)&var2, var2_type, var2_length, &var2_default, sf_initial);
 	for(i = 0; i < var3_length; i++){
-		crayon_savefile_add_variable(details, lol[i], lol_type, lol_length, &lol_default, sf_initial);
-		crayon_savefile_add_variable(details, hi[i], hi_type, hi_length, &hi_default, sf_initial);
-		crayon_savefile_add_variable(details, name[i], name_type, name_length, &name_default, sf_initial);
+		crayon_savefile_add_variable(details, (void**)&lol[i], lol_type, lol_length, &lol_default, sf_initial);
+		crayon_savefile_add_variable(details, (void**)&hi[i], hi_type, hi_length, &hi_default, sf_initial);
+		crayon_savefile_add_variable(details, (void**)&name[i], name_type, name_length, &name_default, sf_initial);
 	}
 
 	//Set the savefile
@@ -41,6 +47,7 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 
 //We use a double pointer because we want to modify the pointer itself with malloc
 int16_t setup_vmu_icon_load(uint8_t ** vmu_lcd_icon, char * icon_path){
+	#ifdef _arch_dreamcast
 	*vmu_lcd_icon = (uint8_t *) malloc(6 * 32);	//6 * 32 because we have 48/32 1bpp so we need that / 8 bytes
 	FILE * file_lcd_icon = fopen(icon_path, "rb");
 	if(!file_lcd_icon){return -1;}
@@ -48,11 +55,17 @@ int16_t setup_vmu_icon_load(uint8_t ** vmu_lcd_icon, char * icon_path){
 	fclose(file_lcd_icon);
 
 	return res;
+	#else
+
+	return 0;
+	#endif
 }
 
 void setup_vmu_icon_apply(uint8_t * vmu_lcd_icon, uint8_t valid_vmu_screens){
+	#ifdef _arch_dreamcast
 	crayon_vmu_display_icon(valid_vmu_screens, vmu_lcd_icon);
 	free(vmu_lcd_icon);
+	#endif
 
 	return;
 }

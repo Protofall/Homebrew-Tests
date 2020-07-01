@@ -8,13 +8,14 @@
 #include <string.h>
 #include <stdint.h> //For the uintX_t types
 
+#ifdef _arch_dreamcast
 #include <kos/fs_romdisk.h> //For romdisk swapping
 
 #if CRAYON_BOOT_MODE == 1
-	//For mounting the sd dir
-	#include <dc/sd.h>
-	#include <kos/blockdev.h>
-	#include <ext2/fs_ext2.h>
+//For mounting the sd dir
+#include <dc/sd.h>
+#include <kos/blockdev.h>
+#include <ext2/fs_ext2.h>
 
 	#define MNT_MODE FS_EXT2_MOUNT_READWRITE	//Might manually change it so its not a define anymore
 
@@ -23,5 +24,6 @@
 #endif
 
 	uint8_t crayon_memory_mount_romdisk(char *filename, char *mountpoint);
+#endif
 
 #endif

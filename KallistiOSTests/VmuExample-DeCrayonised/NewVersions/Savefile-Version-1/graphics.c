@@ -1,5 +1,6 @@
 #include "graphics.h"
 
+#ifdef _arch_dreamcast
 void font_init(){
 	#if CRAYON_BOOT_MODE == 1
 		crayon_memory_mount_romdisk("/sd/sf_icon.img", "/Save");
@@ -94,8 +95,14 @@ void draw_char(float x1, float y1, float z1, uint8_t a, uint8_t r, uint8_t g, ui
 	vert.v = v1;
 	pvr_prim(&vert, sizeof(vert));
 }
+#endif
 
 void draw_string(float x, float y, float z, uint8_t a, uint8_t r, uint8_t g, uint8_t b, char *str, float xs, float ys){
+	#ifndef _arch_dreamcast
+	printf("%s\n", str);
+	#endif
+
+	#ifdef _arch_dreamcast
 	pvr_poly_cxt_t cxt;
 	pvr_poly_hdr_t hdr;
 	float orig_x = x;
@@ -115,4 +122,5 @@ void draw_string(float x, float y, float z, uint8_t a, uint8_t r, uint8_t g, uin
 		draw_char(x, y, z, a, r, g, b, *str++, xs, ys);
 		x += 8 * xs;
 	}
+	#endif
 }

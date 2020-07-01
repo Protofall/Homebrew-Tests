@@ -1,8 +1,6 @@
 #ifndef MY_GRAPHICS_H
 #define MY_GRAPHICS_H
 
-#include <dc/pvr.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,11 +8,16 @@
 
 #include "loading.h"
 
+#ifdef _arch_dreamcast
+
+#include <dc/pvr.h>
+
 pvr_ptr_t font_tex;
 
 void font_init();
 
 void draw_char(float x1, float y1, float z1, uint8_t a, uint8_t r, uint8_t g, uint8_t b, int c, float xs, float ys);
+#endif
 
 //Draw a string
 //x, y, "argb" params and str are self explanatory. xs and ys are kind like scaling/how large to make it

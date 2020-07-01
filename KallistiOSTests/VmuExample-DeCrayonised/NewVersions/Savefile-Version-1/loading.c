@@ -1,5 +1,6 @@
 #include "loading.h"
 
+#ifdef _arch_dreamcast
 #if CRAYON_BOOT_MODE == 1
 	void unmount_ext2_sd(){
 		fs_ext2_unmount("/sd");
@@ -52,3 +53,4 @@ uint8_t crayon_memory_mount_romdisk(char *filename, char *mountpoint){
 	fs_romdisk_mount(mountpoint, buffer, 1); // Now mount that file as a romdisk, buffer will be freed when romdisk is unmounted
 	return 0;
 }
+#endif
