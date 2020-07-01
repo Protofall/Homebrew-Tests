@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdint.h> //For the uintX_t types
 
-#include "loading.h"
+#include "crayon.h"
 
 #ifdef _arch_dreamcast
 

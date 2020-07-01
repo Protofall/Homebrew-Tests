@@ -2,7 +2,7 @@
 #define MS_SETUP_H
 
 #include "extra_structs.h"
-#include "loading.h"
+#include "crayon.h"
 
 #include <stdlib.h>
 #include <string.h>

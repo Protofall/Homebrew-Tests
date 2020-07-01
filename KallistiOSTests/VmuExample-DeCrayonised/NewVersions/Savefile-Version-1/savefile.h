@@ -1,13 +1,6 @@
 #ifndef SAVEFILE_CRAYON_H
 #define SAVEFILE_CRAYON_H
 
-#if !(defined(_arch_dreamcast) || defined(__APPLE__) || defined(__linux__) || defined(_WIN32))
-	#error "UNSUPPORTED ARCHITECTURE/PLATFORM"
-#endif
-
-#if defined(__APPLE__) || defined(__linux__) || defined(_WIN32)
-	#define _arch_pc
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +13,8 @@
 #include <dc/vmufs.h>
 #include <kos/fs.h>
 #endif
+
+#include "crayon.h"
 
 //This is never accessed directly, but it will contain all of you variables that will get saved
 typedef struct crayon_savefile_data{
@@ -105,13 +100,11 @@ typedef struct crayon_savefile_history{
 
 #if defined( _arch_dreamcast)
 	#define CRAY_SF_NUM_SAVE_DEVICES 8
-#elif defined(_arch_pc)
-	#define CRAY_SF_NUM_SAVE_DEVICES 1
-#endif
-
-#if defined( _arch_dreamcast)
+	#define CRAY_SF_MEMCARD MAPLE_FUNC_MEMCARD
 	#define CRAY_SF_HDR_SIZE sizeof(vmu_hdr_t)
 #elif defined(_arch_pc)
+	#define CRAY_SF_NUM_SAVE_DEVICES 1
+	#define CRAY_SF_MEMCARD 1
 	//The size of the app_id, short desc and long desc detail struct strings plus payload size
 		//Later I might modify it to take the SF icon in RGBA8888 format binary
 	#define CRAY_SF_HDR_SIZE (16 + 16 + 32 + sizeof(uint32_t))
@@ -157,18 +150,6 @@ typedef struct crayon_savefile_details{
 	crayon_savefile_history_t *history;
 	crayon_savefile_history_t *history_tail;	//Just used to speed stuff the history building process
 } crayon_savefile_details_t;
-
-
-//---------------------HELPER STUFF FROM CRAYON------------------------
-
-
-//Only used for slot/port in dreamcast. x is port, y is slot
-typedef struct vec2_s8{
-	int8_t x, y;
-} vec2_s8_t;
-
-//Checks if the computer running this code is big endian or not
-uint8_t crayon_misc_is_big_endian();
 
 
 //---------------------DREAMCAST SPECIFIC------------------------
@@ -227,7 +208,7 @@ uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t *details, const
 
 //Default value is just one element because having default arrays (Eg for c-strings) would be too complex in C
 //So instead all elements are set to the value pointed to by default_value
-crayon_savefile_history_t *crayon_savefile_add_variable(crayon_savefile_details_t *details, void **data_ptr,
+crayon_savefile_history_t *crayon_savefile_add_variable(crayon_savefile_details_t *details, void *data_ptr,
 	uint8_t data_type, uint16_t length, const void *default_value, crayon_savefile_version_t version);
 
 //Pass in the pointer to the variable node we want to delete
@@ -246,7 +227,7 @@ void crayon_savefile_update_valid_saves(crayon_savefile_details_t *details, uint
 
 //Returns an 8 bit var for each VMU (a1a2b1b2c1c2d1d2)
 //First function is a macro so you don't need to remember the function name
-#if defined( _arch_dreamcast)
+#if defined(_arch_dreamcast)
 #define crayon_savefile_get_valid_screens()  crayon_savefile_get_valid_function(MAPLE_FUNC_LCD)
 #else
 #define crayon_savefile_get_valid_screens()  0

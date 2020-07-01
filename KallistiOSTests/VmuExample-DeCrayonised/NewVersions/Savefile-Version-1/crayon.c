@@ -1,4 +1,9 @@
-#include "loading.h"
+#include "crayon.h"
+
+extern uint8_t crayon_misc_is_big_endian(){
+	int a = 1;
+	return !((char*)&a)[0];
+}
 
 #ifdef _arch_dreamcast
 #if CRAYON_BOOT_MODE == 1
