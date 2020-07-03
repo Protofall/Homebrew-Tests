@@ -16,6 +16,10 @@
 
 #include "crayon.h"
 
+//Only used for PC atm. Its a path to the folder where it will try to save to
+char * __savefile_base_path;
+uint16_t __savefile_base_path_length;
+
 //This is never accessed directly, but it will contain all of you variables that will get saved
 typedef struct crayon_savefile_data{
 	uint8_t *u8;
@@ -184,6 +188,9 @@ void crayon_savefile_set_memcard_bit(uint8_t *memcard_bitmap, uint8_t save_devic
 
 //------------------Called externally----------------------
 
+
+uint8_t crayon_savefile_set_base_path(char * path);	//On Dreamcast this is always "/vmu/" and it will ignore the param
+
 //Make sure to call this on a new savefile details struct otherwise you can get strange results
 	//Note that you should also add the icon/eyecatcher if you want and set all the strings
 	//as well as the variable history
@@ -242,6 +249,8 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details);
 
 //This will delete the saved savefile 
 uint8_t crayon_savefile_delete_savedata(crayon_savefile_details_t *details);	//UNFINISHED
+
+void crayon_savefile_free_base_path();
 
 void crayon_savefile_free(crayon_savefile_details_t *details);	//Calling this calls the other frees
 void crayon_savefile_free_icon(crayon_savefile_details_t *details);

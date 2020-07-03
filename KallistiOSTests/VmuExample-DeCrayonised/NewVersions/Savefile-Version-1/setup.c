@@ -2,6 +2,11 @@
 
 uint8_t setup_savefile(crayon_savefile_details_t * details){
 	uint8_t i;
+
+	//Note on Dreamcast it ignores the parameter
+	//and does "/vmu/" anyway
+	crayon_savefile_set_base_directory("/saves/");
+
 	crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", sf_current_version);
 	crayon_savefile_set_app_id(details, "ProtoSaveDemo3");
 	crayon_savefile_set_short_desc(details, "Save Demo");

@@ -48,20 +48,27 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	vec2_s8_t port_and_slot = crayon_savefile_dreamcast_get_port_and_slot(save_device_id);
 	if(port_and_slot.x < 0){return 1;}
 
-	//Non-Dreamcast checl
+	//Non-Dreamcast check
 	// if(save_device_id < 0 || save_device_id >= CRAY_SF_NUM_SAVE_DEVICES){return 1;}
 
 	//port/port_and_slot.x gets converted to a, b, c or d. port_and_slot.y is the slot (0 or 1)
 	//Its more efficient to do it this way than with sprintf
-	char savename[256] = "/vmu/";
-	savename[5] = port_and_slot.x + 'a';
-	savename[6] = port_and_slot.y + '0';
-	savename[7] = '/';
-	savename[8] = '\0';
-	strlcat(savename, details->strings[CRAY_SF_STRING_FILENAME], 256);
+	char *savename = malloc(64);
+	if(!savename){
+		return 1;
+	}
+
+	strcpy(savename, __savefile_base_path);
+	savename[__savefile_base_path_length    ] = port_and_slot.x + 'a';
+	savename[__savefile_base_path_length + 1] = port_and_slot.y + '0';
+	savename[__savefile_base_path_length + 2] = '/';
+	savename[__savefile_base_path_length + 3] = '\0';
+	strlcat(savename, details->strings[CRAY_SF_STRING_FILENAME], 64);
 
 	//File DNE
-	if(!(fp = fopen(savename, "rb"))){
+	fp = fopen(savename, "rb");
+	free(savename);
+	if(!fp){
 		return 1;
 	}
 
@@ -94,8 +101,22 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	char *app_id_buffer = malloc(sizeof(char) * length);
 	if(!app_id_buffer){return 1;}
 
-	FILE *fp = fopen(details->strings[CRAY_SF_STRING_FILENAME], 'r');
-	if(!fp){free(app_id_buffer); return 1;}
+	char *savename = malloc(__savefile_base_path_length +
+		crayon_savefile_detail_string_length(CRAY_SF_STRING_FILENAME) + 1);
+	if(!savename){
+		free(app_id_buffer);
+		return 1;
+	}
+
+	strcpy(savename, __savefile_base_path);
+	strcat(savename, details->strings[CRAY_SF_STRING_FILENAME]);
+
+	FILE *fp = fopen(details->strings[CRAY_SF_STRING_FILENAME], 'rb');
+	free(savename);
+	if(!fp){
+		free(app_id_buffer);
+		return 1;
+	}
 
 	fread(app_id_buffer, length, 1, fp);	//The app id is at the start of the hdr on PC
 	fclose(fp);
@@ -234,6 +255,30 @@ uint8_t crayon_savefile_get_memcard_bit(uint8_t memcard_bitmap, uint8_t save_dev
 void crayon_savefile_set_memcard_bit(uint8_t *memcard_bitmap, uint8_t save_device_id){
 	*memcard_bitmap |= (1 << save_device_id);
 	return;
+}
+
+uint8_t crayon_savefile_set_base_path(char * path){
+	#ifdef _arch_dreamcast
+	(void)path;
+
+	if(!(__savefile_base_path = malloc(6))){	// "/vmu/"
+		return 1;
+	}
+
+	strcpy("/vmu/", __savefile_base_path);
+
+	#else
+	uint16_t length = strlen(path);
+
+	if(!(__savefile_base_path = malloc(length))){
+		return 1;
+	}
+
+	strcpy(path, __savefile_base_path);
+	#endif
+
+	__savefile_base_path_length = strlen(__savefile_base_path);
+	return 0;
 }
 
 //Make sure to call this first (And call the save icon and eyecatcher functions after since this overides them)
@@ -591,7 +636,7 @@ void crayon_savefile_update_valid_saves(crayon_savefile_details_t *details, uint
 	int i;
 	for(i = 0; i < CRAY_SF_NUM_SAVE_DEVICES; i++){
 		//Check if device is a memory card
-		if(crayon_savefile_check_device_for_function(MAPLE_FUNC_MEMCARD, i)){
+		if(crayon_savefile_check_device_for_function(CRAY_SF_MEMCARD, i)){
 			continue;
 		}
 
@@ -639,23 +684,43 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	//Also we use check for a memory card and not a savefile because the rest of the load code can automatically
 	//check if a save exists so its faster this way (Since this function and crayon_savefile_check_savedata()
 	//share alot of the same code)
-	if(crayon_savefile_check_device_for_function(MAPLE_FUNC_MEMCARD, details->save_device_id)){
+	if(crayon_savefile_check_device_for_function(CRAY_SF_MEMCARD, details->save_device_id)){
 		return 1;
 	}
 
+	#if defined(_arch_dreamcast)
 	vec2_s8_t port_and_slot = crayon_savefile_dreamcast_get_port_and_slot(details->save_device_id);
 
 	//port/port_and_slot.x gets converted to a, b, c or d. port_and_slot.y is the slot (0 or 1)
 	//Its more efficient to do it this way than with sprintf
-	char savename[256] = "/vmu/";
-	savename[5] = port_and_slot.x + 'a';
-	savename[6] = port_and_slot.y + '0';
-	savename[7] = '/';
-	savename[8] = '\0';
-	strlcat(savename, details->strings[CRAY_SF_STRING_FILENAME], 256);
+	char *savename = malloc(64);
+	if(!savename){
+		return 1;
+	}
+
+	strcpy(savename, __savefile_base_path);
+	savename[__savefile_base_path_length    ] = port_and_slot.x + 'a';
+	savename[__savefile_base_path_length + 1] = port_and_slot.y + '0';
+	savename[__savefile_base_path_length + 2] = '/';
+	savename[__savefile_base_path_length + 3] = '\0';
+	strlcat(savename, details->strings[CRAY_SF_STRING_FILENAME], 64);
+
+	#else
+
+	char *savename = malloc(__savefile_base_path_length +
+		crayon_savefile_detail_string_length(CRAY_SF_STRING_FILENAME) + 1);
+	if(!savename){
+		return 1;
+	}
+
+	strcpy(savename, __savefile_base_path);
+	strcat(savename, details->strings[CRAY_SF_STRING_FILENAME]);
+
+	#endif
 
 	//If the savefile DNE, this will fail
 	if(!(fp = fopen(savename, "rb"))){
+		free(savename);
 		return 1;
 	}
 
@@ -671,13 +736,23 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	fread(pkg_out, pkg_size, 1, fp);
 	fclose(fp);
 
+	#if defined(_arch_dreamcast)
+
 	vmu_pkg_t pkg;
 	vmu_pkg_parse(pkg_out, &pkg);
 
 	//Read the pkg data into my struct
 	crayon_savefile_deserialise(&details->save_data, (uint8_t *)pkg.data, (uint32_t)pkg.data_len);
-	free(pkg_out);
 
+	#else
+
+	//Read the pkg data into my struct
+	//We add CRAY_SF_HDR_SIZE to skip the header
+	crayon_savefile_deserialise(&details->save_data, pkg_out + CRAY_SF_HDR_SIZE, (uint32_t)pkg.data_len);
+
+	#endif
+
+	free(pkg_out);
 	return 0;
 }
 
@@ -700,20 +775,33 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 
 	//port/port_and_slot.x gets converted to a, b, c or d. port_and_slot.y is the slot (0 or 1)
 	//Its more efficient to do it this way than with sprintf
-	char savename[256] = "/vmu/";
-	savename[5] = port_and_slot.x + 'a';
-	savename[6] = port_and_slot.y + '0';
-	savename[7] = '/';
-	savename[8] = '\0';
-	strlcat(savename, details->strings[CRAY_SF_STRING_FILENAME], 256);
+	char *savename = malloc(64);
+	if(!savename){
+		return 1;
+	}
+
+	strcpy(savename, __savefile_base_path);
+	savename[__savefile_base_path_length    ] = port_and_slot.x + 'a';
+	savename[__savefile_base_path_length + 1] = port_and_slot.y + '0';
+	savename[__savefile_base_path_length + 2] = '/';
+	savename[__savefile_base_path_length + 3] = '\0';
+	strlcat(savename, details->strings[CRAY_SF_STRING_FILENAME], 64);
 	#else
 
-	char *savename = details->strings[CRAY_SF_STRING_FILENAME];
+	char *savename = malloc(__savefile_base_path_length +
+		crayon_savefile_detail_string_length(CRAY_SF_STRING_FILENAME) + 1);
+	if(!savename){
+		return 1;
+	}
+
+	strcpy(savename, __savefile_base_path);
+	strcat(savename, details->strings[CRAY_SF_STRING_FILENAME]);
+
 	#endif
 
 	uint8_t *data = malloc(details->save_size);
 	if(!data){
-		free(data);
+		free(savename);
 		return 1;
 	}
 
@@ -761,11 +849,14 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 	if(crayon_savefile_device_free_blocks(port_and_slot.x, port_and_slot.y) + blocks_freed <
 		crayon_savefile_bytes_to_blocks(pkg_size)){
 		free(pkg_out);
+		free(savename);
 		return 1;
 	}
 
 	//Can't open file for some reason
-	if(!(fp = fopen(savename, "wb"))){
+	fp = fopen(savename, "wb");
+	free(savename);
+	if(!fp){
 		free(pkg_out);
 		return 1;
 	}
@@ -774,7 +865,9 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 	free(pkg_out);
 	#else
 
-	if(!(fp = fopen(savename, "wb"))){
+	fp = fopen(savename, "wb");
+	free(savename);
+	if(!fp){
 		free(data);
 		return 1;
 	}
@@ -794,6 +887,11 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 uint8_t crayon_savefile_delete_savedata(crayon_savefile_details_t *details){
 	//int vmufs_delete(maple_device_t *dev, const char *fn);
 	return 1;
+}
+
+void crayon_savefile_free_base_path(){
+	free(__savefile_base_path);
+	return;
 }
 
 void crayon_savefile_free(crayon_savefile_details_t *details){

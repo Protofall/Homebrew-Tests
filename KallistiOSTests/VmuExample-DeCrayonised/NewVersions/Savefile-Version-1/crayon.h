@@ -44,7 +44,4 @@ extern uint8_t crayon_misc_is_big_endian();
 	uint8_t crayon_memory_mount_romdisk(char *filename, char *mountpoint);
 #endif
 
-//Only used for PC atm. Its a path to the folder where it will try to save to
-char * __savefile_base_path;
-
 #endif

@@ -53,11 +53,6 @@ uint8_t crayon_savefile_set_string(crayon_savefile_details_t *details, const cha
 uint8_t crayon_savefile_get_memcard_bit(uint8_t memcard_bitmap, uint8_t save_device_id);
 void crayon_savefile_set_memcard_bit(uint8_t *memcard_bitmap, uint8_t save_device_id);
 
-
-//FUNCTIONS WITH DREAMCAST SPECIFIC CODE
-uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details);
-
-
 //TECHNICALLY DREAMCAST ONLY, BUT WORKS ON PC
 uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t *details, const char *eyecatch_path);
 uint8_t crayon_savefile_add_icon(crayon_savefile_details_t *details, const char *image, const char *palette,
@@ -76,5 +71,6 @@ uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details
 uint16_t crayon_savefile_device_free_blocks(int8_t port, int8_t slot);
 int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t *details);
 uint8_t crayon_savefile_check_device_for_function(uint32_t function, int8_t save_device_id);
-uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_t save_device_id);
 uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details);
+uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_t save_device_id);
+uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details);
