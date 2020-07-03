@@ -122,7 +122,7 @@ int main(){
 	#endif
 
 	crayon_savefile_free(&savefile_details);
-	crayon_savefile_free_base_directory();
+	crayon_savefile_free_base_path();
 	#ifdef _arch_dreamcast
 	pvr_mem_free(font_tex);
 	#endif
