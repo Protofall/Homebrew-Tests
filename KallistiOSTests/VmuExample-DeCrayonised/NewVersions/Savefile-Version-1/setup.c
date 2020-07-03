@@ -5,6 +5,8 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 
 	//Note on Dreamcast it ignores the parameter
 	//and does "/vmu/" anyway
+	//If you want you can have a #ifndef _arch_pc
+	//with this and an #else with NULL parameter
 	crayon_savefile_set_base_path("/saves/");
 
 	crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", sf_current_version);
@@ -29,7 +31,7 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 	// free(vmu_lcd_icon);	//Already free-d within the above function
 	
 	crayon_savefile_add_icon(details, "/Save/image.bin", "/Save/palette.bin", 3, 15);
-	uint8_t res = crayon_savefile_add_eyecatcher(details, "Save/eyecatch3.bin");	//Must be called AFTER init
+	crayon_savefile_add_eyecatcher(details, "Save/eyecatch3.bin");	//Must be called AFTER init
 
 	fs_romdisk_unmount("/Save");
 
@@ -47,7 +49,7 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 	//Set the savefile
 	crayon_savefile_solidify(details);
 
-	return res;
+	return 0;
 }
 
 //We use a double pointer because we want to modify the pointer itself with malloc

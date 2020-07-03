@@ -7,7 +7,7 @@
 	#define _arch_pc
 #endif
 
-#if !(defined(_arch_dreamcast) || defined(__arch_pc))
+#if !(defined(_arch_dreamcast) || defined(_arch_pc))
 	#error "UNSUPPORTED ARCHITECTURE/PLATFORM"
 #endif
 

@@ -111,7 +111,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	strcpy(savename, __savefile_base_path);
 	strcat(savename, details->strings[CRAY_SF_STRING_FILENAME]);
 
-	FILE *fp = fopen(details->strings[CRAY_SF_STRING_FILENAME], 'rb');
+	FILE *fp = fopen(details->strings[CRAY_SF_STRING_FILENAME], "rb");
 	free(savename);
 	if(!fp){
 		free(app_id_buffer);
@@ -414,6 +414,8 @@ uint8_t crayon_savefile_add_icon(crayon_savefile_details_t *details, const char 
 }
 
 uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t *details, const char *eyecatcher_path){
+	#ifdef _arch_dreamcast
+
 	FILE *eyecatcher_data_file = fopen(eyecatcher_path, "rb");
 	if(!eyecatcher_data_file){
 		return 1;
@@ -445,6 +447,8 @@ uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t *details, const
 		return 1;
 	}
 	fclose(eyecatcher_data_file);
+
+	#endif
 
 	return 0;
 }
@@ -748,7 +752,7 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 
 	//Read the pkg data into my struct
 	//We add CRAY_SF_HDR_SIZE to skip the header
-	crayon_savefile_deserialise(&details->save_data, pkg_out + CRAY_SF_HDR_SIZE, (uint32_t)pkg.data_len);
+	crayon_savefile_deserialise(&details->save_data, pkg_out + CRAY_SF_HDR_SIZE, pkg_size - CRAY_SF_HDR_SIZE);
 
 	#endif
 

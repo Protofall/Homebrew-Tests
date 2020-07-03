@@ -14,6 +14,10 @@
 #include <kos/fs.h>
 #endif
 
+#ifdef _arch_pc
+#include <bsd/string.h>
+#endif
+
 #include "crayon.h"
 
 //Only used for PC atm. Its a path to the folder where it will try to save to
