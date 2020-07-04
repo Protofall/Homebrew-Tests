@@ -52,8 +52,6 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 	//Set the savefile
 	crayon_savefile_solidify(details);
 
-	printf("device id %d, valids %d\n", details->save_device_id, details->valid_memcards);
-
 	return 0;
 }
 

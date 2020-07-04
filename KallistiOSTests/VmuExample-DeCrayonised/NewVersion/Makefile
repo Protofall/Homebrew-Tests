@@ -87,7 +87,7 @@ $(SUBDIRS):
 # pc builds
 #------------------------------------------------------------------------------
 
-program-pc: $(TARGET)
+pc: $(TARGET)
 
 clean-pc:
 	rm -f *.o $(TARGET)

@@ -21,16 +21,18 @@ char * __savefile_base_path;
 uint16_t __savefile_base_path_length;
 
 //Var types the user passes into functions
-#define CRAY_TYPE_UINT8  0
-#define CRAY_TYPE_UINT16 1
-#define CRAY_TYPE_UINT32 2
-#define CRAY_TYPE_SINT8  3
-#define CRAY_TYPE_SINT16 4
-#define CRAY_TYPE_SINT32 5
-#define CRAY_TYPE_FLOAT  6
-#define CRAY_TYPE_DOUBLE 7
-#define CRAY_TYPE_CHAR   8
-#define CRAY_NUM_TYPES   9
+enum {
+	CRAY_TYPE_DOUBLE = 0,
+	CRAY_TYPE_FLOAT,
+	CRAY_TYPE_UINT32,
+	CRAY_TYPE_SINT32,
+	CRAY_TYPE_UINT16,
+	CRAY_TYPE_SINT16,
+	CRAY_TYPE_UINT8,
+	CRAY_TYPE_SINT8,
+	CRAY_TYPE_CHAR,
+	CRAY_NUM_TYPES	//This will be the number of types we have available
+};
 
 //This is never accessed directly, but it will contain all of you variables that will get saved
 typedef struct crayon_savefile_data{
@@ -168,7 +170,6 @@ void crayon_vmu_display_icon(uint8_t vmu_bitmap, void *icon);
 //---------------------Internal use------------------------
 
 
-uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_t save_device_id);	//1 if save DNE. 0 if it does
 uint8_t crayon_savefile_check_device_for_function(uint32_t function, int8_t save_device_id);	//0 if device is valid
 uint16_t crayon_savefile_bytes_to_blocks(size_t bytes);	//Takes a byte count and returns no. blocks needed to save it
 int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t *details);	//Returns the number of blocks your save file will need (Uncompressed)
@@ -178,13 +179,19 @@ uint16_t crayon_savefile_detail_string_length(uint8_t string_id);
 void __attribute__((weak)) crayon_savefile_serialise(crayon_savefile_data_t *sf_data, uint8_t *pkg_data);
 void __attribute__((weak)) crayon_savefile_deserialise(crayon_savefile_data_t *sf_data, uint8_t *pkg_data, uint32_t pkg_size);
 
-uint16_t crayon_savefile_device_free_blocks(int8_t port, int8_t slot);
+uint16_t crayon_savefile_get_device_free_blocks(int8_t device_id);
+
+//Returns a pointer on success, returns NULL if either the the save_device_id is OOB or failed malloc
+char *crayon_savefile_save_path(crayon_savefile_details_t *details, int8_t save_device_id);
 
 //---------------Both internal and external----------------
 
 
 uint8_t crayon_savefile_get_memcard_bit(uint8_t memcard_bitmap, uint8_t save_device_id);	//Returns boolean
 void crayon_savefile_set_memcard_bit(uint8_t *memcard_bitmap, uint8_t save_device_id);	//Updates memcard_bitmap
+
+//Returns 0 if a savefile on that device exists, 1 if there's an error/DNE and 2 if the savefile is of a newer version
+uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_t save_device_id);
 
 
 //------------------Called externally----------------------
@@ -226,10 +233,6 @@ crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_detai
 
 //Once the history is fully constructed, we can then build our actual savefile with this fuction
 uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details);
-
-//Will attempt to find the first device with a valid savefile otherwise it will find the first device that
-//can store a savefile. If one of these are found it will modifiy the save_device_id from the details struct
-void crayon_savefile_get_first_valid_device(crayon_savefile_details_t *details);
 
 //This function will update the valid memcards and/or the current savefile bitmaps
 #define CRAY_SAVEFILE_UPDATE_MODE_MEMCARD_PRESENT (1 << 0)

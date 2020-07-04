@@ -91,13 +91,10 @@ int main(){
 	font_init();
 	#endif
 
-	//Find the first savefile (if it exists)
-	crayon_savefile_get_first_valid_device(&savefile_details);
-
 	//Try and load savefile
 	uint8_t load_error = crayon_savefile_load_savedata(&savefile_details);	//If a savefile DNE this fails
 
-	uint8_t save_error = 0;
+	uint8_t save_error = 1;
 	if(savefile_details.valid_memcards){
 		save_error = crayon_savefile_save_savedata(&savefile_details);
 		crayon_savefile_update_valid_saves(&savefile_details, CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT);	//Updating the save
