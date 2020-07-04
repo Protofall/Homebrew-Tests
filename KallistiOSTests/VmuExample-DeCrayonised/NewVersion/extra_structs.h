@@ -18,7 +18,8 @@ typedef struct other_struct{
 typedef struct my_savefile_var{
 	uint16_t var1;
 	float var2;
-	other_struct_t var3[20];
+	uint8_t var3;
+	other_struct_t var4[20];
 } my_savefile_var_t;
 */
 
@@ -30,27 +31,32 @@ typedef struct my_savefile_var{
 uint16_t * var1;
 #define var1_type CRAY_TYPE_UINT16
 #define var1_length 1	//If you want, these length defines could be unsigned int consts.
-static const uint16_t var1_default = 0;
+static const uint16_t var1_default = 300;
 
 float * var2;
 #define var2_type CRAY_TYPE_FLOAT
 #define var2_length 1
 static const float var2_default = 5.5;
 
-//Now the "other_struct"
-#define var3_length 20
+uint8_t * var3;
+#define var3_type CRAY_TYPE_UINT8
+#define var3_length 1
+static const uint8_t var3_default = 27;
 
-uint8_t * lol[var3_length];
+//Now the "other_struct"
+#define var4_length 20
+
+uint8_t * lol[var4_length];
 #define lol_type CRAY_TYPE_UINT8
 #define lol_length 1
 static const uint8_t lol_default = 0;
 
-int32_t * hi[var3_length];
+int32_t * hi[var4_length];
 #define hi_type CRAY_TYPE_SINT32
 #define hi_length 2
 static const int32_t hi_default = -1;
 
-char * name[var3_length];
+char * name[var4_length];
 #define name_type CRAY_TYPE_CHAR
 #define name_length 16
 static const char name_default = '\0';

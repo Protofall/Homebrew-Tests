@@ -87,11 +87,13 @@ OFILES = $(patsubst %.c,%.o,$(wildcard *.c))
 # pc builds
 #------------------------------------------------------------------------------
 
+program-pc: $(TARGET)
+
 clean:
 	rm -f *.o $(TARGET)
 
 %.o: %.c
-	gcc -D__linux__ -c -o $@ $<
+	gcc -g -c -o $@ $<
 
 $(TARGET): $(OFILES)
-	gcc -D__linux__ -o $@ $^
+	gcc -g -o $@ $^

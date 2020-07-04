@@ -119,6 +119,61 @@ int main(){
 	sprintf(buffer2, "save_res: %d\n", save_res);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
+
+	printf("u8\n");
+	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_UINT8]; i++){
+		printf("%d, ", savefile_details.save_data.u8[i]);
+	}
+	printf("\n");
+
+	printf("u16\n");
+	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_UINT16]; i++){
+		printf("%d, ", savefile_details.save_data.u16[i]);
+	}
+	printf("\n");
+
+	printf("u32\n");
+	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_UINT32]; i++){
+		printf("%d, ", savefile_details.save_data.u32[i]);
+	}
+	printf("\n");
+
+	printf("s8\n");
+	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_SINT8]; i++){
+		printf("%d, ", savefile_details.save_data.s8[i]);
+	}
+	printf("\n");
+
+	printf("s16\n");
+	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_SINT16]; i++){
+		printf("%d, ", savefile_details.save_data.s16[i]);
+	}
+	printf("\n");
+
+	printf("s32\n");
+	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_SINT32]; i++){
+		printf("%d, ", savefile_details.save_data.s32[i]);
+	}
+	printf("\n");
+
+	printf("Float\n");
+	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_FLOAT]; i++){
+		printf("%f, ", savefile_details.save_data.floats[i]);
+	}
+	printf("\n");
+
+	printf("Double\n");
+	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_DOUBLE]; i++){
+		printf("%lf, ", savefile_details.save_data.doubles[i]);
+	}
+	printf("\n");
+
+	printf("Chars\n");
+	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_CHAR]; i++){
+		printf("%c", savefile_details.save_data.chars[i]);
+	}
+	printf("(END)\n");
+
 	#endif
 
 	crayon_savefile_free(&savefile_details);

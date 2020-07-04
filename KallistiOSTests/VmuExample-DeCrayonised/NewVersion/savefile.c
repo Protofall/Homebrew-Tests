@@ -265,16 +265,16 @@ uint8_t crayon_savefile_set_base_path(char * path){
 		return 1;
 	}
 
-	strcpy("/vmu/", __savefile_base_path);
+	strcpy(__savefile_base_path, "/vmu/");
 
 	#else
 	uint16_t length = strlen(path);
 
-	if(!(__savefile_base_path = malloc(length))){
+	if(!(__savefile_base_path = malloc(length + 1))){
 		return 1;
 	}
 
-	strcpy(path, __savefile_base_path);
+	strcpy(__savefile_base_path, path);
 	#endif
 
 	__savefile_base_path_length = strlen(__savefile_base_path);
@@ -284,6 +284,8 @@ uint8_t crayon_savefile_set_base_path(char * path){
 //Make sure to call this first (And call the save icon and eyecatcher functions after since this overides them)
 uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details, const char *save_name,
 	crayon_savefile_version_t version){
+	uint16_t save_name_length = strlen(save_name);
+
 	details->version = version;
 
 	details->save_data.u8 = NULL;
@@ -335,8 +337,17 @@ uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details
 		}
 	}
 
+	//Given string is too big
+	if(save_name_length >= str_lengths[CRAY_SF_STRING_FILENAME]){
+		for(i = 0; i < CRAY_SF_NUM_DETAIL_STRINGS; i++){
+			if(details->strings[i]){free(details->strings[i]);}
+		}
+		return 1;
+	}
+
 	//Copy the savename here
-	strlcpy(details->strings[CRAY_SF_STRING_FILENAME], save_name, str_lengths[CRAY_SF_STRING_FILENAME]);
+	strncpy(details->strings[CRAY_SF_STRING_FILENAME], save_name, save_name_length + 1);
+	details->strings[CRAY_SF_STRING_FILENAME][str_lengths[CRAY_SF_STRING_FILENAME] - 1] = '\0';
 
 	//Update the savefile and memcards stuff
 	details->valid_vmu_screens = crayon_savefile_get_valid_screens();
@@ -351,9 +362,10 @@ uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details
 
 uint8_t crayon_savefile_set_string(crayon_savefile_details_t *details, const char *string, uint8_t string_id){
 	uint16_t max_length = crayon_savefile_detail_string_length(string_id);
-	if(max_length == 0){return 1;}
+	uint16_t string_length = strlen(string);
+	if(max_length == 0 || string_length >= max_length){return 1;}
 
-	strlcpy(details->strings[string_id], string, max_length);
+	strncpy(details->strings[string_id], string, string_length + 1);
 	details->strings[string_id][max_length - 1] = '\0';
 
 	return 0;
@@ -569,36 +581,46 @@ void crayon_savefile_solidify(crayon_savefile_details_t *details){
 	if(lengths[CRAY_TYPE_DOUBLE]){details->save_data.doubles = malloc(sizeof(double) * lengths[CRAY_TYPE_DOUBLE]);}
 	if(lengths[CRAY_TYPE_CHAR]){details->save_data.chars = malloc(sizeof(char) * lengths[CRAY_TYPE_CHAR]);}
 
+	uint32_t i;
 	crayon_savefile_history_t *var = details->history;
 	while(var){
 		if(var->version_removed == 0){	//We only give space to vars that still exist
 			switch(var->data_type){
 				case CRAY_TYPE_UINT8:
 					*var->data_ptr.u8 = &details->save_data.u8[indexes[var->data_type]];
+					for(i = 0; i < var->data_length; i++){(*var->data_ptr.u8)[i] = var->default_value.u8;}
 					break;
 				case CRAY_TYPE_UINT16:
 					*var->data_ptr.u16 = &details->save_data.u16[indexes[var->data_type]];
+					for(i = 0; i < var->data_length; i++){(*var->data_ptr.u16)[i] = var->default_value.u16;}
 					break;
 				case CRAY_TYPE_UINT32:
 					*var->data_ptr.u32 = &details->save_data.u32[indexes[var->data_type]];
+					for(i = 0; i < var->data_length; i++){(*var->data_ptr.u32)[i] = var->default_value.u32;}
 					break;
 				case CRAY_TYPE_SINT8:
 					*var->data_ptr.s8 = &details->save_data.s8[indexes[var->data_type]];
+					for(i = 0; i < var->data_length; i++){(*var->data_ptr.s8)[i] = var->default_value.s8;}
 					break;
 				case CRAY_TYPE_SINT16:
 					*var->data_ptr.s16 = &details->save_data.s16[indexes[var->data_type]];
+					for(i = 0; i < var->data_length; i++){(*var->data_ptr.s16)[i] = var->default_value.s16;}
 					break;
 				case CRAY_TYPE_SINT32:
 					*var->data_ptr.s32 = &details->save_data.s32[indexes[var->data_type]];
+					for(i = 0; i < var->data_length; i++){(*var->data_ptr.s32)[i] = var->default_value.s32;}
 					break;
 				case CRAY_TYPE_FLOAT:
 					*var->data_ptr.floats = &details->save_data.floats[indexes[var->data_type]];
+					for(i = 0; i < var->data_length; i++){(*var->data_ptr.floats)[i] = var->default_value.floats;}
 					break;
 				case CRAY_TYPE_DOUBLE:
 					*var->data_ptr.doubles = &details->save_data.doubles[indexes[var->data_type]];
+					for(i = 0; i < var->data_length; i++){(*var->data_ptr.doubles)[i] = var->default_value.doubles;}
 					break;
 				case CRAY_TYPE_CHAR:
 					*var->data_ptr.chars = &details->save_data.chars[indexes[var->data_type]];
+					memset(*var->data_ptr.chars, var->default_value.chars, var->data_length);
 				break;
 			}
 			indexes[var->data_type] += var->data_length;
@@ -814,8 +836,8 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 	#if defined(_arch_dreamcast)
 	vmu_pkg_t pkg;
 	sprintf(pkg.desc_long, details->strings[CRAY_SF_STRING_LONG_DESC]);
-	strlcpy(pkg.desc_short, details->strings[CRAY_SF_STRING_SHORT_DESC], 16);
-	strlcpy(pkg.app_id, details->strings[CRAY_SF_STRING_APP_ID], 16);
+	strncpy(pkg.desc_short, details->strings[CRAY_SF_STRING_SHORT_DESC], 16);
+	strncpy(pkg.app_id, details->strings[CRAY_SF_STRING_APP_ID], 16);
 	pkg.icon_cnt = details->icon_anim_count;
 	pkg.icon_anim_speed = details->icon_anim_speed;
 	memcpy(pkg.icon_pal, details->icon_palette, 32);
