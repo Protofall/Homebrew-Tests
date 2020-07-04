@@ -3,11 +3,13 @@
 uint8_t setup_savefile(crayon_savefile_details_t * details){
 	uint8_t i;
 
-	//Note on Dreamcast it ignores the parameter
-	//and does "/vmu/" anyway
-	//If you want you can have a #ifndef _arch_pc
-	//with this and an #else with NULL parameter
-	crayon_savefile_set_base_path("/saves/");
+	#ifdef _arch_pc
+	crayon_savefile_set_base_path("saves/");
+	#else
+	crayon_savefile_set_base_path(NULL);	//Dreamcast ignore the parameter anyways
+											//(Assumes "/vmu/") so its still fine to
+											//do the method above for all platforms
+	#endif
 
 	crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", sf_current_version);
 	crayon_savefile_set_app_id(details, "ProtoSaveDemo3");

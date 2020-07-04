@@ -19,7 +19,7 @@ typedef struct my_savefile_var{
 	uint16_t var1;
 	float var2;
 	uint8_t var3;
-	other_struct_t var4[20];
+	other_struct_t var4[10];
 } my_savefile_var_t;
 */
 
@@ -44,7 +44,7 @@ uint8_t * var3;
 static const uint8_t var3_default = 27;
 
 //Now the "other_struct"
-#define var4_length 20
+#define var4_length 10
 
 uint8_t * lol[var4_length];
 #define lol_type CRAY_TYPE_UINT8
@@ -59,7 +59,7 @@ static const int32_t hi_default = -1;
 char * name[var4_length];
 #define name_type CRAY_TYPE_CHAR
 #define name_length 16
-static const char name_default = '\0';
+static const char name_default = 'A';
 
 //For those unfamiliar with enum, a value with no assigned number is equal to the previous value plus 1
 //Also you just use the variable name like a constant, not "savefile_version.sf_initial" or something

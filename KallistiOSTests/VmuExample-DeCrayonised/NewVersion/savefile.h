@@ -20,6 +20,18 @@
 char * __savefile_base_path;
 uint16_t __savefile_base_path_length;
 
+//Var types the user passes into functions
+#define CRAY_TYPE_UINT8  0
+#define CRAY_TYPE_UINT16 1
+#define CRAY_TYPE_UINT32 2
+#define CRAY_TYPE_SINT8  3
+#define CRAY_TYPE_SINT16 4
+#define CRAY_TYPE_SINT32 5
+#define CRAY_TYPE_FLOAT  6
+#define CRAY_TYPE_DOUBLE 7
+#define CRAY_TYPE_CHAR   8
+#define CRAY_NUM_TYPES   9
+
 //This is never accessed directly, but it will contain all of you variables that will get saved
 typedef struct crayon_savefile_data{
 	uint8_t *u8;
@@ -46,18 +58,7 @@ typedef struct crayon_savefile_data{
 #define CRAY_SF_REMOVE_CMD_DIVIDE   4
 #define CRAY_SF_REMOVE_CMD_REPLACE  5
 
-//Var types the user passes into functions
-#define CRAY_TYPE_UINT8  0
-#define CRAY_TYPE_UINT16 1
-#define CRAY_TYPE_UINT32 2
-#define CRAY_TYPE_SINT8  3
-#define CRAY_TYPE_SINT16 4
-#define CRAY_TYPE_SINT32 5
-#define CRAY_TYPE_FLOAT  6
-#define CRAY_TYPE_DOUBLE 7
-#define CRAY_TYPE_CHAR   8
-
-#define crayon_savefile_version_t uint16_t	//If you know you won't have many versions, change this to a uint8_t
+#define crayon_savefile_version_t uint32_t	//If you know you won't have many versions, change this to a uint8_t
 											//But don't change it mid way through a project
 
 typedef struct crayon_savefile_history{

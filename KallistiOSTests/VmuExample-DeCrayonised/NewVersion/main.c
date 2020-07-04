@@ -9,6 +9,69 @@
 
 #define CRAYON_DEBUG 0
 
+#ifdef _arch_pc
+
+//NOTE: You should never need to access these variables directly. I'm only doing so for debugging purposes
+void print_all_vars(crayon_savefile_details_t *savefile_details){
+	printf("u8\n");
+	for(int i = 0; i < savefile_details->save_data.lengths[CRAY_TYPE_UINT8]; i++){
+		printf("%d, ", savefile_details->save_data.u8[i]);
+	}
+	printf("\n");
+
+	printf("u16\n");
+	for(int i = 0; i < savefile_details->save_data.lengths[CRAY_TYPE_UINT16]; i++){
+		printf("%d, ", savefile_details->save_data.u16[i]);
+	}
+	printf("\n");
+
+	printf("u32\n");
+	for(int i = 0; i < savefile_details->save_data.lengths[CRAY_TYPE_UINT32]; i++){
+		printf("%d, ", savefile_details->save_data.u32[i]);
+	}
+	printf("\n");
+
+	printf("s8\n");
+	for(int i = 0; i < savefile_details->save_data.lengths[CRAY_TYPE_SINT8]; i++){
+		printf("%d, ", savefile_details->save_data.s8[i]);
+	}
+	printf("\n");
+
+	printf("s16\n");
+	for(int i = 0; i < savefile_details->save_data.lengths[CRAY_TYPE_SINT16]; i++){
+		printf("%d, ", savefile_details->save_data.s16[i]);
+	}
+	printf("\n");
+
+	printf("s32\n");
+	for(int i = 0; i < savefile_details->save_data.lengths[CRAY_TYPE_SINT32]; i++){
+		printf("%d, ", savefile_details->save_data.s32[i]);
+	}
+	printf("\n");
+
+	printf("Float\n");
+	for(int i = 0; i < savefile_details->save_data.lengths[CRAY_TYPE_FLOAT]; i++){
+		printf("%f, ", savefile_details->save_data.floats[i]);
+	}
+	printf("\n");
+
+	printf("Double\n");
+	for(int i = 0; i < savefile_details->save_data.lengths[CRAY_TYPE_DOUBLE]; i++){
+		printf("%lf, ", savefile_details->save_data.doubles[i]);
+	}
+	printf("\n");
+
+	printf("Chars\n");
+	for(int i = 0; i < savefile_details->save_data.lengths[CRAY_TYPE_CHAR]; i++){
+		printf("%c", savefile_details->save_data.chars[i]);
+	}
+	printf("(END)\n");
+
+	return;
+}
+
+#endif
+
 int main(){
 	#ifdef _arch_dreamcast
 	#if CRAYON_BOOT_MODE == 1
@@ -120,59 +183,14 @@ int main(){
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
 
-	printf("u8\n");
-	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_UINT8]; i++){
-		printf("%d, ", savefile_details.save_data.u8[i]);
-	}
-	printf("\n");
+	// print_all_vars(&savefile_details);
 
-	printf("u16\n");
-	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_UINT16]; i++){
-		printf("%d, ", savefile_details.save_data.u16[i]);
-	}
-	printf("\n");
+	// var1[0] = 2997;
+	// name[2][3] = '1';
+	// //Each name is 16 chars and we have 20 names. So this is the 4th char of the 3rd name
+	// //(2 * 16) + 3 = 35-th index of the dest array
 
-	printf("u32\n");
-	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_UINT32]; i++){
-		printf("%d, ", savefile_details.save_data.u32[i]);
-	}
-	printf("\n");
-
-	printf("s8\n");
-	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_SINT8]; i++){
-		printf("%d, ", savefile_details.save_data.s8[i]);
-	}
-	printf("\n");
-
-	printf("s16\n");
-	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_SINT16]; i++){
-		printf("%d, ", savefile_details.save_data.s16[i]);
-	}
-	printf("\n");
-
-	printf("s32\n");
-	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_SINT32]; i++){
-		printf("%d, ", savefile_details.save_data.s32[i]);
-	}
-	printf("\n");
-
-	printf("Float\n");
-	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_FLOAT]; i++){
-		printf("%f, ", savefile_details.save_data.floats[i]);
-	}
-	printf("\n");
-
-	printf("Double\n");
-	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_DOUBLE]; i++){
-		printf("%lf, ", savefile_details.save_data.doubles[i]);
-	}
-	printf("\n");
-
-	printf("Chars\n");
-	for(int i = 0; i < savefile_details.save_data.lengths[CRAY_TYPE_CHAR]; i++){
-		printf("%c", savefile_details.save_data.chars[i]);
-	}
-	printf("(END)\n");
+	// print_all_vars(&savefile_details);
 
 	#endif
 

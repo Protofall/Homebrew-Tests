@@ -63,7 +63,9 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	savename[__savefile_base_path_length + 1] = port_and_slot.y + '0';
 	savename[__savefile_base_path_length + 2] = '/';
 	savename[__savefile_base_path_length + 3] = '\0';
-	strlcat(savename, details->strings[CRAY_SF_STRING_FILENAME], 64);
+	strncat(savename, details->strings[CRAY_SF_STRING_FILENAME],
+		crayon_savefile_detail_string_length(CRAY_SF_STRING_FILENAME) + 1);
+	savename[63] = '\0';
 
 	//File DNE
 	fp = fopen(savename, "rb");
@@ -729,7 +731,9 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	savename[__savefile_base_path_length + 1] = port_and_slot.y + '0';
 	savename[__savefile_base_path_length + 2] = '/';
 	savename[__savefile_base_path_length + 3] = '\0';
-	strlcat(savename, details->strings[CRAY_SF_STRING_FILENAME], 64);
+	strncat(savename, details->strings[CRAY_SF_STRING_FILENAME],
+		crayon_savefile_detail_string_length(CRAY_SF_STRING_FILENAME) + 1);
+	savename[63] = '\0';
 
 	#else
 
@@ -811,7 +815,10 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 	savename[__savefile_base_path_length + 1] = port_and_slot.y + '0';
 	savename[__savefile_base_path_length + 2] = '/';
 	savename[__savefile_base_path_length + 3] = '\0';
-	strlcat(savename, details->strings[CRAY_SF_STRING_FILENAME], 64);
+	strncat(savename, details->strings[CRAY_SF_STRING_FILENAME],
+		crayon_savefile_detail_string_length(CRAY_SF_STRING_FILENAME) + 1);
+	savename[63] = '\0';
+
 	#else
 
 	char *savename = malloc(__savefile_base_path_length +
