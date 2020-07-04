@@ -40,17 +40,19 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 	#endif
 
 	//Now lets construct our history
-	crayon_savefile_add_variable(details, &var1, var1_type, var1_length, &var1_default, sf_initial);
-	crayon_savefile_add_variable(details, &var2, var2_type, var2_length, &var2_default, sf_initial);
-	crayon_savefile_add_variable(details, &var3, var3_type, var3_length, &var3_default, sf_initial);
-	for(i = 0; i < var4_length; i++){
-		crayon_savefile_add_variable(details, &lol[i], lol_type, lol_length, &lol_default, sf_initial);
-		crayon_savefile_add_variable(details, &hi[i], hi_type, hi_length, &hi_default, sf_initial);
-		crayon_savefile_add_variable(details, &name[i], name_type, name_length, &name_default, sf_initial);
+	crayon_savefile_add_variable(details, &sf_var1, sf_var1_type, sf_var1_length, &sf_var1_default, sf_initial);
+	crayon_savefile_add_variable(details, &sf_var2, sf_var2_type, sf_var2_length, &sf_var2_default, sf_initial);
+	crayon_savefile_add_variable(details, &sf_var3, sf_var3_type, sf_var3_length, &sf_var3_default, sf_initial);
+	for(i = 0; i < sf_var4_length; i++){
+		crayon_savefile_add_variable(details, &sf_lol[i], sf_lol_type, sf_lol_length, &sf_lol_default, sf_initial);
+		crayon_savefile_add_variable(details, &sf_hi[i], sf_hi_type, sf_hi_length, &sf_hi_default, sf_initial);
+		crayon_savefile_add_variable(details, &sf_name[i], sf_name_type, sf_name_length, &sf_name_default, sf_initial);
 	}
 
 	//Set the savefile
 	crayon_savefile_solidify(details);
+
+	printf("device id %d, valids %d\n", details->save_device_id, details->valid_memcards);
 
 	return 0;
 }

@@ -137,6 +137,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 //Returns true if device has certain function/s
 uint8_t crayon_savefile_check_device_for_function(uint32_t function, int8_t save_device_id){
 	#ifdef _arch_dreamcast
+
 	maple_device_t *vmu;
 
 	vec2_s8_t port_and_slot = crayon_savefile_dreamcast_get_port_and_slot(save_device_id);
@@ -159,6 +160,9 @@ uint8_t crayon_savefile_check_device_for_function(uint32_t function, int8_t save
 	return 0;
 
 	#else
+
+	printf("save_device_id %d\n", save_device_id);
+
 	//For PC we only have one slot and function is ignored for now
 	if(save_device_id < 0 || save_device_id >= CRAY_SF_NUM_SAVE_DEVICES){
 		return 1;
@@ -568,7 +572,7 @@ crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_detai
 	return var;
 }
 
-void crayon_savefile_solidify(crayon_savefile_details_t *details){
+uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
 	uint16_t *lengths = details->save_data.lengths;
 	uint16_t indexes[9] = {0};
 
@@ -582,6 +586,9 @@ void crayon_savefile_solidify(crayon_savefile_details_t *details){
 	if(lengths[CRAY_TYPE_FLOAT]){details->save_data.floats = malloc(sizeof(float) * lengths[CRAY_TYPE_FLOAT]);}
 	if(lengths[CRAY_TYPE_DOUBLE]){details->save_data.doubles = malloc(sizeof(double) * lengths[CRAY_TYPE_DOUBLE]);}
 	if(lengths[CRAY_TYPE_CHAR]){details->save_data.chars = malloc(sizeof(char) * lengths[CRAY_TYPE_CHAR]);}
+
+	//Add in malloc error support
+	;
 
 	uint32_t i;
 	crayon_savefile_history_t *var = details->history;
@@ -642,6 +649,32 @@ void crayon_savefile_solidify(crayon_savefile_details_t *details){
 		(lengths[CRAY_TYPE_CHAR] * sizeof(char));
 
 	crayon_savefile_update_valid_saves(details, CRAY_SAVEFILE_UPDATE_MODE_BOTH);	//Need to double check this
+	return 0;
+}
+
+void crayon_savefile_get_first_valid_device(crayon_savefile_details_t *details){
+	uint8_t i;
+	int8_t first_valid_memcard = -1;
+	int8_t first_valid_savefile = -1;
+	for(i = 0; i < CRAY_SF_NUM_SAVE_DEVICES; i++){
+		if(crayon_savefile_get_memcard_bit(savefile_details.valid_memcards, i)){
+			if(first_valid_memcard == -1){
+				first_valid_memcard = i;
+			}
+		}
+		if(crayon_savefile_get_memcard_bit(savefile_details.valid_saves, i)){
+			first_valid_savefile = i;
+			break;
+		}
+	}
+
+	if(first_valid_savefile >= 0){
+		savefile_details.save_device_id = first_valid_savefile;
+	}
+	else{
+		savefile_details.save_device_id = first_valid_memcard;
+	}
+
 	return;
 }
 
@@ -672,17 +705,28 @@ void crayon_savefile_update_valid_saves(crayon_savefile_details_t *details, uint
 		if(crayon_savefile_check_savedata(details, i)){
 			if(!get_memcards){continue;}
 
+			#if defined(_arch_pc)	//We assume there's enough space on PC
+
+			crayon_savefile_set_memcard_bit(&valid_memcards, i);
+
+			#else
+
 			port_and_slot = crayon_savefile_dreamcast_get_port_and_slot(i);
 			if(crayon_savefile_device_free_blocks(port_and_slot.x, port_and_slot.y) >=
 				crayon_savefile_get_save_block_count(details)){
 				crayon_savefile_set_memcard_bit(&valid_memcards, i);
 			}
+
+			#endif
 		}
 		else{
 			if(get_memcards){crayon_savefile_set_memcard_bit(&valid_memcards, i);}
 			if(get_saves){crayon_savefile_set_memcard_bit(&valid_saves, i);}
 		}
 	}
+
+	printf("C %d\n", valid_memcards);
+	printf("D %d\n", valid_saves);
 
 	if(get_saves){details->valid_saves = valid_saves;}
 	if(get_memcards){details->valid_memcards = valid_memcards;}
@@ -763,6 +807,7 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 		fclose(fp);
 		return 1;
 	}
+
 	fread(pkg_out, pkg_size, 1, fp);
 	fclose(fp);
 

@@ -225,7 +225,11 @@ crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_detai
 	crayon_savefile_version_t version);
 
 //Once the history is fully constructed, we can then build our actual savefile with this fuction
-void crayon_savefile_solidify(crayon_savefile_details_t *details);
+uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details);
+
+//Will attempt to find the first device with a valid savefile otherwise it will find the first device that
+//can store a savefile. If one of these are found it will modifiy the save_device_id from the details struct
+void crayon_savefile_get_first_valid_device(crayon_savefile_details_t *details);
 
 //This function will update the valid memcards and/or the current savefile bitmaps
 #define CRAY_SAVEFILE_UPDATE_MODE_MEMCARD_PRESENT (1 << 0)

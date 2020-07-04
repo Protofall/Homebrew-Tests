@@ -73,21 +73,18 @@ void print_all_vars(crayon_savefile_details_t *savefile_details){
 #endif
 
 int main(){
-	#ifdef _arch_dreamcast
-	#if CRAYON_BOOT_MODE == 1
+	#if defined(_arch_dreamcast) && CRAYON_BOOT_MODE == 1
+
 	int sdRes = mount_ext2_sd();	//This function should be able to mount an ext2 formatted sd card to the /sd dir
-	if(sdRes == 0){
-		MS_options.sd_present = 1;
-	}
-	else{
+	if(sdRes != 0){
 		return 0;
 	}
-	#endif
+
 	#endif
 
 	crayon_savefile_details_t savefile_details;
 
-	uint8_t res = setup_savefile(&savefile_details);
+	uint8_t setup_res = setup_savefile(&savefile_details);
 
 	#ifdef _arch_dreamcast
 	pvr_init_defaults();	//Init kos
@@ -95,55 +92,32 @@ int main(){
 	#endif
 
 	//Find the first savefile (if it exists)
-	uint8_t iter;
-	for(iter = 0; iter < CRAY_SF_NUM_SAVE_DEVICES; iter++){
-		if(crayon_savefile_get_memcard_bit(savefile_details.valid_saves, iter)){	//Use the left most VMU
-			savefile_details.save_device_id = iter;
-			break;
-		}
-	}
+	crayon_savefile_get_first_valid_device(&savefile_details);
 
 	//Try and load savefile
-	crayon_savefile_load_savedata(&savefile_details);
+	uint8_t load_error = crayon_savefile_load_savedata(&savefile_details);	//If a savefile DNE this fails
 
-	//No savefile yet
-	if(savefile_details.valid_memcards && savefile_details.save_device_id == -1){
-		//If we don't already have a savefile, choose a VMU
-		if(savefile_details.valid_memcards){
-			for(iter = 0; iter < CRAY_SF_NUM_SAVE_DEVICES; iter++){
-				if(crayon_savefile_get_memcard_bit(savefile_details.valid_memcards, iter)){	//Use the left most VMU
-					savefile_details.save_device_id = iter;
-					goto Exit_loop_2;
-				}
-			}
-		}
-		Exit_loop_2:
-		;
-	}
-
-	uint16_t save_res = 0;
+	uint8_t save_error = 0;
 	if(savefile_details.valid_memcards){
-		save_res = crayon_savefile_save_savedata(&savefile_details);
+		save_error = crayon_savefile_save_savedata(&savefile_details);
 		crayon_savefile_update_valid_saves(&savefile_details, CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT);	//Updating the save
 	}
 
-	#ifdef _arch_dreamcast
-	#if CRAYON_BOOT_MODE == 1
+	#if defined(_arch_dreamcast) && CRAYON_BOOT_MODE == 1
 		unmount_ext2_sd();	//Unmounts the SD dir to prevent corruption since we won't need it anymore
 	#endif
-	#endif
 
+	#ifdef _arch_dreamcast
 	char buffer[70];
-	if(!res){
+	if(!setup_res){
 		sprintf(buffer, "Save created\nUses %d blocks and has %d frames of\nanimation",
 		crayon_savefile_get_save_block_count(&savefile_details),
 		savefile_details.icon_anim_count);
 	}
 	else{
-		sprintf(buffer, "It failed with code %d", res);
+		sprintf(buffer, "It failed with code %d", setup_res);
 	}
 
-	#ifdef _arch_dreamcast
 	uint8_t end = 0;
 	while(!end){
 		pvr_wait_ready();
@@ -156,7 +130,7 @@ int main(){
 		pvr_scene_begin();
 
 		pvr_list_begin(PVR_LIST_TR_POLY);
-			switch(save_res){
+			switch(save_error){
 			case 0:
 				draw_string(30, 30, 1, 255, 255, 216, 0, buffer, 2, 2); break;
 			case 1:
@@ -177,17 +151,27 @@ int main(){
 
 		pvr_scene_finish();
 	}
+
 	#else
+
+	char buffer[70];
+	if(!setup_res){
+		sprintf(buffer, "Save initialised\nUses %ld bytes", CRAY_SF_HDR_SIZE + savefile_details.save_size);
+	}
+	else{
+		sprintf(buffer, "It failed with code %d", setup_res);
+	}
+
 	char buffer2[32];
-	sprintf(buffer2, "save_res: %d\n", save_res);
+	sprintf(buffer2, "save_error: %d. load_error %d\n", save_error, load_error);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
 
 	// print_all_vars(&savefile_details);
 
-	// var1[0] = 2997;
-	// name[2][3] = '1';
-	// //Each name is 16 chars and we have 20 names. So this is the 4th char of the 3rd name
+	// sf_var1[0] = 2997;
+	// sf_name[2][3] = '1';
+	// //Each sf_name is 16 chars and we have 20 names. So this is the 4th char of the 3rd name
 	// //(2 * 16) + 3 = 35-th index of the dest array
 
 	// print_all_vars(&savefile_details);
