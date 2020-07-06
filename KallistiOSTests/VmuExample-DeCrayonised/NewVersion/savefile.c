@@ -244,6 +244,7 @@ uint16_t crayon_savefile_get_device_free_blocks(int8_t device_id){
 //It will construct the full string for you
 char *crayon_savefile_save_path(crayon_savefile_details_t *details, int8_t save_device_id){
 	if(save_device_id < 0 || save_device_id >= CRAY_SF_NUM_SAVE_DEVICES){
+		printf("Test\n");
 		return NULL;
 	}
 
@@ -267,23 +268,21 @@ char *crayon_savefile_save_path(crayon_savefile_details_t *details, int8_t save_
 
 	#if defined(_arch_dreamcast)
 
-	char device[4];
 	vec2_s8_t port_and_slot = crayon_savefile_dreamcast_get_port_and_slot(savefile_device_id);
 	if(port_and_slot.x == -1){	//Due to first return NULL, this should never trigger
 		free(path);
 		return NULL;
 	}
 
-	device[0] = port_and_slot.x + 'a';
-	device[1] = port_and_slot.y + '0';
-	device[2] = '/';
-	device[3] = '\0';
-	strcat(path, device);
+	uint32_t curr_length = strlen(path);
+	device[curr_length    ] = port_and_slot.x + 'a';
+	device[curr_length + 1] = port_and_slot.y + '0';
+	device[curr_length + 2] = '/';
+	device[curr_length + 3] = '\0';
 
 	#endif
 
 	strcat(path, details->strings[CRAY_SF_STRING_FILENAME]);
-
 
 	return path;
 }
@@ -299,15 +298,19 @@ void crayon_savefile_set_memcard_bit(uint8_t *memcard_bitmap, uint8_t save_devic
 
 //THIS CAN BE OPTIMISED
 uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_t save_device_id){
-	char *savename = crayon_savefile_save_path(details, details->save_device_id);
+	char *savename = crayon_savefile_save_path(details, save_device_id);
 	if(!savename){
+		// printf("FAILED AT 1\n");
 		return 1;
 	}
+
+	// printf("PATH: %s\n", savename);
 
 	FILE *fp = fopen(savename, "rb");
 	free(savename);
 	//File DNE
 	if(!fp){
+		// printf("FAILED AT 2\n");
 		return 1;
 	}
 
@@ -331,6 +334,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 
 	//If the version IDs don't match, then can can't comprehend that savefile
 	if(strcmp(pkg.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
+		printf("FAILED AT 3\n");
 		return 1;
 	}
 
@@ -339,6 +343,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	crayon_misc_encode_to_buffer((uint8_t*)&sf_version, pkg.data, sizeof(crayon_savefile_version_t));
 
 	if(sf_version > details->version){
+		printf("FAILED AT 4\n");
 		return 2;
 	}
 
@@ -348,6 +353,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	char *app_id_buffer = malloc(sizeof(char) * length);
 	if(!app_id_buffer){
 		fclose(fp);
+		printf("FAILED AT 5\n");
 		return 1;
 	}
 
@@ -366,6 +372,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	free(app_id_buffer);
 
 	if(rv){
+		printf("FAILED AT 6\n");
 		return 1;
 	}
 
@@ -373,6 +380,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 
 	//Check to confirm the savefile version is not newer than it should be
 	if(sf_version > details->version){
+		printf("FAILED AT 7\n");
 		return 2;
 	}
 
@@ -768,6 +776,7 @@ uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
 		(lengths[CRAY_TYPE_SINT8] * sizeof(int8_t)) +
 		(lengths[CRAY_TYPE_CHAR] * sizeof(char));
 
+	printf("Solidify saves update\n");
 	crayon_savefile_update_valid_saves(details, CRAY_SAVEFILE_UPDATE_MODE_BOTH);	//Need to double check this
 	
 	//If no savefile was found, then set our save device to the first valid memcard
@@ -856,18 +865,23 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	//check if a save exists so its faster this way (Since this function and crayon_savefile_check_savedata()
 	//share alot of the same code)
 	if(crayon_savefile_check_device_for_function(CRAY_SF_MEMCARD, details->save_device_id)){
+		printf("Test1\n");
 		return 1;
 	}
 
 	char *savename = crayon_savefile_save_path(details, details->save_device_id);
 	if(!savename){
+		printf("Test2\n");
 		return 1;
 	}
+
+	printf("PATH: %s\n", savename);
 
 	//If the savefile DNE, this will fail
 	FILE *fp = fopen(savename, "rb");
 	free(savename);
 	if(!fp){
+		printf("Test3\n");
 		return 1;
 	}
 
@@ -878,6 +892,7 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	uint8_t *data = malloc(pkg_size);
 	if(!data){
 		fclose(fp);
+		printf("Test4\n");
 		return 1;
 	}
 
@@ -905,8 +920,11 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 
 	//Either it has the wrong size or the app ids somehow don't match
 	//(The later should never trigger if you use this library right)
-	if(hdr.data_size != pkg_size - CRAY_SF_HDR_SIZE || !strcmp(hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
+	if(hdr.data_size != pkg_size - CRAY_SF_HDR_SIZE || strcmp(hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
 		free(data);
+		printf("%d, %d\n", hdr.data_size, pkg_size - CRAY_SF_HDR_SIZE);
+		printf("%s %s\n", hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID]);
+		printf("Test5\n");
 		return 1;
 	}
 
@@ -916,6 +934,8 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 		hdr.data_size);
 
 	#endif
+
+	printf("Test6 %d\n", deserialise_result);
 
 	free(data);
 	return deserialise_result;
@@ -1017,22 +1037,13 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 		return 1;
 	}
 
-	// uint8_t i;
-	// for(i = CRAY_SF_STRING_APP_ID; i < CRAY_SF_NUM_DETAIL_STRINGS; i++){
-	// 	fwrite(details->strings[i], crayon_savefile_detail_string_length(i), sizeof(char), fp);
-	// }
-
+	char string_buffer[32] = {0};
 	uint8_t i;
 	for(i = CRAY_SF_STRING_APP_ID; i < CRAY_SF_NUM_DETAIL_STRINGS; i++){
-		printf("%s\n", details->strings[i]);
+		strncpy(string_buffer, details->strings[i], crayon_savefile_detail_string_length(i));
+		fwrite(string_buffer, sizeof(char), crayon_savefile_detail_string_length(i), fp);
 	}
 
-	fwrite(details->strings[CRAY_SF_STRING_APP_ID], sizeof(char),
-		crayon_savefile_detail_string_length(CRAY_SF_STRING_APP_ID), fp);
-	fwrite(details->strings[CRAY_SF_STRING_SHORT_DESC], sizeof(char),
-		crayon_savefile_detail_string_length(CRAY_SF_STRING_SHORT_DESC), fp);
-	fwrite(details->strings[CRAY_SF_STRING_LONG_DESC], sizeof(char),
-		crayon_savefile_detail_string_length(CRAY_SF_STRING_LONG_DESC), fp);
 	fwrite(&length, sizeof(uint32_t), 1, fp);
 
 	fwrite(data, length, sizeof(uint8_t), fp);

@@ -160,9 +160,12 @@ int main(){
 	}
 
 	char buffer2[32];
+	char buffer3[32];
 	sprintf(buffer2, "save_error: %d. load_error %d\n", save_error, load_error);
+	sprintf(buffer3, "bitmaps: %d. %d\n", savefile_details.valid_memcards, savefile_details.valid_saves);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
+	draw_string(0, 0, 0, 0, 0, 0, 0, buffer3, 0, 0);
 
 	// print_all_vars(&savefile_details);
 
