@@ -86,13 +86,20 @@ int main(){
 
 	uint8_t setup_res = setup_savefile(&savefile_details);
 
-	#ifdef _arch_dreamcast
+	#if defined(_arch_dreamcast)
+	
 	pvr_init_defaults();	//Init kos
 	font_init();
+	
 	#endif
 
 	//Try and load savefile
 	uint8_t load_error = crayon_savefile_load_savedata(&savefile_details);	//If a savefile DNE this fails
+
+	//Change vars here
+	sf_var1[0] = 2997;
+	sf_var2[0] += 5.25;
+	sf_name[2][3] = '1';
 
 	uint8_t save_error = 1;
 	if(savefile_details.valid_memcards){
@@ -101,10 +108,13 @@ int main(){
 	}
 
 	#if defined(_arch_dreamcast) && CRAYON_BOOT_MODE == 1
-		unmount_ext2_sd();	//Unmounts the SD dir to prevent corruption since we won't need it anymore
+	
+	unmount_ext2_sd();	//Unmounts the SD dir to prevent corruption since we won't need it anymore
+	
 	#endif
 
 	#ifdef _arch_dreamcast
+	
 	char buffer[70];
 	if(!setup_res){
 		sprintf(buffer, "Save created\nUses %d blocks and has %d frames of\nanimation",
@@ -128,21 +138,21 @@ int main(){
 
 		pvr_list_begin(PVR_LIST_TR_POLY);
 			switch(save_error){
-			case 0:
-				draw_string(30, 30, 1, 255, 255, 216, 0, buffer, 2, 2); break;
-			case 1:
-				draw_string(30, 30, 1, 255, 255, 216, 0, "Selected device isn't a VMU", 2, 2); break;
-			case 2:
-				draw_string(30, 30, 1, 255, 255, 216, 0, "Selected VMU doesn't have enough space", 2, 2); break;
-			case 3:
-				draw_string(30, 30, 1, 255, 255, 216, 0, "Ran out of memory when making savefile", 2, 2); break;
-			case 4:
-				draw_string(30, 30, 1, 255, 255, 216, 0, "Not enough space on VMU for savefile", 2, 2); break;
-			case 5:
-				draw_string(30, 30, 1, 255, 255, 216, 0, "Couldn't access savefile on VMU", 2, 2); break;
-			case 6:
-				draw_string(30, 30, 1, 255, 255, 216, 0, "Couldn't write to VMU", 2, 2); break;
-		}
+				case 0:
+					draw_string(30, 30, 1, 255, 255, 216, 0, buffer, 2, 2); break;
+				case 1:
+					draw_string(30, 30, 1, 255, 255, 216, 0, "Selected device isn't a VMU", 2, 2); break;
+				case 2:
+					draw_string(30, 30, 1, 255, 255, 216, 0, "Selected VMU doesn't have enough space", 2, 2); break;
+				case 3:
+					draw_string(30, 30, 1, 255, 255, 216, 0, "Ran out of memory when making savefile", 2, 2); break;
+				case 4:
+					draw_string(30, 30, 1, 255, 255, 216, 0, "Not enough space on VMU for savefile", 2, 2); break;
+				case 5:
+					draw_string(30, 30, 1, 255, 255, 216, 0, "Couldn't access savefile on VMU", 2, 2); break;
+				case 6:
+					draw_string(30, 30, 1, 255, 255, 216, 0, "Couldn't write to VMU", 2, 2); break;
+			}
 		pvr_list_finish();
 
 
@@ -167,7 +177,7 @@ int main(){
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer3, 0, 0);
 
-	// print_all_vars(&savefile_details);
+	print_all_vars(&savefile_details);
 
 	// sf_var1[0] = 2997;
 	// sf_name[2][3] = '1';

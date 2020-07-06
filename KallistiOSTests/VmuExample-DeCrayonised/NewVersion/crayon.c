@@ -63,6 +63,7 @@ int mount_ext2_sd(){
 
 uint8_t crayon_memory_mount_romdisk(char *filename, char *mountpoint){
 	void *buffer;
+
 	ssize_t size = fs_load(filename, &buffer); // Loads the file "filename" into RAM
 
 	if(size == -1){

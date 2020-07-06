@@ -1,20 +1,27 @@
 #include "setup.h"
 
 uint8_t setup_savefile(crayon_savefile_details_t * details){
-	uint8_t i;
+	uint8_t i, error;
 
 	#ifdef _arch_pc
-	crayon_savefile_set_base_path("saves/");
+
+	crayon_savefile_set_path("saves/");
+
 	#else
-	crayon_savefile_set_base_path(NULL);	//Dreamcast ignore the parameter anyways
+	
+	crayon_savefile_set_path(NULL);	//Dreamcast ignore the parameter anyways
 											//(Assumes "/vmu/") so its still fine to
 											//do the method above for all platforms
 	#endif
 
-	crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", sf_current_version);
-	crayon_savefile_set_app_id(details, "ProtoSaveDemo3");
-	crayon_savefile_set_short_desc(details, "Save Demo");
-	crayon_savefile_set_long_desc(details, "Crayon's VMU demo");
+	error = crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", sf_current_version);
+	if(error){printf("ERROR, savefile couldn't be created\n");}
+	error += crayon_savefile_set_app_id(details, "ProtoSaveDemo3");
+	error += crayon_savefile_set_short_desc(details, "Save Demo");
+	error += crayon_savefile_set_long_desc(details, "Crayon's VMU demo");
+	if(error){printf("ERROR, Savefile string too long\n");}
+
+	if(error){while(1);}
 
 	#ifdef _arch_dreamcast
 
@@ -26,6 +33,7 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 	#endif
 
 	uint8_t * vmu_lcd_icon = NULL;
+
 	setup_vmu_icon_load(&vmu_lcd_icon, "/Save/LCD.bin");
 
 	//Apply the VMU LCD icon (Apparently this is automatic if your savefile is an ICONDATA.VMS)

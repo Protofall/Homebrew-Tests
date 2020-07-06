@@ -16,10 +16,6 @@
 
 #include "crayon.h"
 
-//Only used for PC atm. Its a path to the folder where it will try to save to
-char * __savefile_base_path;
-uint16_t __savefile_base_path_length;
-
 //Var types the user passes into functions
 enum {
 	CRAY_TYPE_DOUBLE = 0,
@@ -123,7 +119,7 @@ typedef struct crayon_savefile_history{
 		char long_desc[32];
 		uint32_t data_size;
 	} crayon_savefile_hdr_t;
-	
+
 #endif
 
 //For DREAMCAST
@@ -192,7 +188,7 @@ uint8_t __attribute__((weak)) crayon_savefile_deserialise(crayon_savefile_detail
 uint16_t crayon_savefile_get_device_free_blocks(int8_t device_id);
 
 //Returns a pointer on success, returns NULL if either the the save_device_id is OOB or failed malloc
-char *crayon_savefile_save_path(crayon_savefile_details_t *details, int8_t save_device_id);
+char *crayon_savefile_get_full_path(crayon_savefile_details_t *details, int8_t save_device_id);
 
 //---------------Both internal and external----------------
 
@@ -207,7 +203,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 //------------------Called externally----------------------
 
 
-uint8_t crayon_savefile_set_base_path(char * path);	//On Dreamcast this is always "/vmu/" and it will ignore the param
+uint8_t crayon_savefile_set_path(char * path);	//On Dreamcast this is always "/vmu/" and it will ignore the param
 
 //Make sure to call this on a new savefile details struct otherwise you can get strange results
 	//Note that you should also add the icon/eyecatcher if you want and set all the strings
