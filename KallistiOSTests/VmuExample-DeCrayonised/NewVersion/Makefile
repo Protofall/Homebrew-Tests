@@ -93,8 +93,10 @@ clean-pc:
 	rm -f *.o $(TARGET)
 	rm -f "saves/SAVE_DEMO3.s"
 
-%.o: %.c
-	gcc -g -c -o $@ $<
-
-$(TARGET): $(OFILES)
-	gcc -g -o $@ $^
+$(TARGET):
+	gcc -g -Wall -c -o crayon.o crayon.c
+	gcc -g -Wall -c -o savefile.o savefile.c
+	gcc -g -Wall -c -o graphics.o graphics.c
+	gcc -g -Wall -c -o setup.o setup.c
+	gcc -g -Wall -c -o main.o main.c
+	gcc -g -Wall -o $@ $(OFILES)

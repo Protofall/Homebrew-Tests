@@ -36,17 +36,17 @@ enum {
 
 //This is never accessed directly, but it will contain all of you variables that will get saved
 typedef struct crayon_savefile_data{
-	uint8_t *u8;
-	uint16_t *u16;
-	uint32_t *u32;
-	int8_t *s8;
-	int16_t *s16;
-	int32_t *s32;
-	float *floats;
 	double *doubles;
+	float *floats;
+	uint32_t *u32;
+	int32_t *s32;
+	uint16_t *u16;
+	int16_t *s16;
+	uint8_t *u8;
+	int8_t *s8;
 	char *chars;
 
-	uint16_t lengths[9];	//The lengths are in the order they appear above
+	uint32_t lengths[9];	//The lengths are in the order they appear above
 } crayon_savefile_data_t;
 
 //When you remove a var, these determine how we handle it
@@ -65,7 +65,7 @@ typedef struct crayon_savefile_data{
 
 typedef struct crayon_savefile_history{
 	uint8_t data_type;
-	uint16_t data_length;
+	uint32_t data_length;
 	crayon_savefile_version_t version_added;
 	crayon_savefile_version_t version_removed;	//0 is not removed
 	uint8_t removal_command;
@@ -106,15 +106,24 @@ typedef struct crayon_savefile_history{
 #define CRAY_SF_STRING_LONG_DESC   3
 
 #if defined( _arch_dreamcast)
+
 	#define CRAY_SF_NUM_SAVE_DEVICES 8
 	#define CRAY_SF_MEMCARD MAPLE_FUNC_MEMCARD
 	#define CRAY_SF_HDR_SIZE sizeof(vmu_hdr_t)
+
 #elif defined(_arch_pc)
+
 	#define CRAY_SF_NUM_SAVE_DEVICES 1
 	#define CRAY_SF_MEMCARD 1
-	//The size of the app_id, short desc and long desc detail struct strings plus payload size
-		//Later I might modify it to take the SF icon in RGBA8888 format binary
+
 	#define CRAY_SF_HDR_SIZE (16 + 16 + 32 + sizeof(uint32_t))
+	typedef struct crayon_savefile_hdr{
+		char app_id[16];
+		char short_desc[16];
+		char long_desc[32];
+		uint32_t data_size;
+	} crayon_savefile_hdr_t;
+	
 #endif
 
 //For DREAMCAST
@@ -176,8 +185,9 @@ int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t *details)
 
 uint16_t crayon_savefile_detail_string_length(uint8_t string_id);
 
-void __attribute__((weak)) crayon_savefile_serialise(crayon_savefile_data_t *sf_data, uint8_t *pkg_data);
-void __attribute__((weak)) crayon_savefile_deserialise(crayon_savefile_data_t *sf_data, uint8_t *pkg_data, uint32_t pkg_size);
+void __attribute__((weak)) crayon_savefile_serialise(crayon_savefile_details_t *details, uint8_t *buffer);
+uint8_t __attribute__((weak)) crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *buffer,
+	uint32_t data_length);
 
 uint16_t crayon_savefile_get_device_free_blocks(int8_t device_id);
 
@@ -224,7 +234,7 @@ uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t *details, const
 //Default value is just one element because having default arrays (Eg for c-strings) would be too complex in C
 //So instead all elements are set to the value pointed to by default_value
 crayon_savefile_history_t *crayon_savefile_add_variable(crayon_savefile_details_t *details, void *data_ptr,
-	uint8_t data_type, uint16_t length, const void *default_value, crayon_savefile_version_t version);
+	uint8_t data_type, uint32_t length, const void *default_value, crayon_savefile_version_t version);
 
 //Pass in the pointer to the variable node we want to delete
 crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_details_t *details,

@@ -24,6 +24,10 @@ typedef struct vec2_s8{
 //Checks if the computer running this code is big endian or not
 extern uint8_t crayon_misc_is_big_endian();
 
+extern void crayon_misc_correct_endian(uint8_t * buffer, size_t bytes);	//WIP
+
+extern void crayon_misc_encode_to_buffer(uint8_t *buffer, uint8_t *data, size_t bytes);
+
 #define CRAYON_BOOT_MODE 0	//Load assets from cd dir instead of sd
 
 #ifdef _arch_dreamcast
@@ -35,13 +39,15 @@ extern uint8_t crayon_misc_is_big_endian();
 #include <kos/blockdev.h>
 #include <ext2/fs_ext2.h>
 
-	#define MNT_MODE FS_EXT2_MOUNT_READWRITE	//Might manually change it so its not a define anymore
+#define MNT_MODE FS_EXT2_MOUNT_READWRITE	//Might manually change it so its not a define anymore
 
-	void unmount_ext2_sd();
-	int mount_ext2_sd();
+void unmount_ext2_sd();
+int mount_ext2_sd();
+
 #endif
 
-	uint8_t crayon_memory_mount_romdisk(char *filename, char *mountpoint);
+uint8_t crayon_memory_mount_romdisk(char *filename, char *mountpoint);
+
 #endif
 
 #endif
