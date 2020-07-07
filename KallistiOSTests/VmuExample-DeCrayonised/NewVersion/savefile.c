@@ -27,7 +27,7 @@ void crayon_vmu_display_icon(uint8_t vmu_bitmap, void *icon){
 	vec2_s8_t port_and_slot;
 	uint8_t i;
 	for(i = 0; i < CRAY_SF_NUM_SAVE_DEVICES; i++){
-		if(crayon_savefile_get_memcard_bit(vmu_bitmap, i)){	//We want to display on this VMU
+		if(crayon_savefile_get_device_bit(vmu_bitmap, i)){	//We want to display on this VMU
 			port_and_slot = crayon_savefile_dreamcast_get_port_and_slot(i);
 			if(!(vmu = maple_enum_dev(port_and_slot.x, port_and_slot.y))){	//Device not present
 				continue;
@@ -137,10 +137,10 @@ uint16_t crayon_savefile_detail_string_length(uint8_t string_id){
 
 //DON'T FORGET THE PKG DATA ALSO CONTAINS THE VERSION NUMBER
 void __attribute__((weak)) crayon_savefile_serialise(crayon_savefile_details_t *details, uint8_t *buffer){
-	crayon_savefile_data_t data = details->save_data;
+	crayon_savefile_data_t data = details->savedata;
 
 	//Encode the version number
-	crayon_misc_encode_to_buffer(buffer, (uint8_t*)&details->version, sizeof(crayon_savefile_version_t));
+	crayon_misc_encode_to_buffer(buffer, (uint8_t*)&details->latest_version, sizeof(crayon_savefile_version_t));
 	buffer += sizeof(crayon_savefile_version_t);
 
 	//Next encode all doubles, then floats, then unsigned 32-bit ints, then signed 32-bit ints
@@ -180,7 +180,7 @@ uint8_t __attribute__((weak)) crayon_savefile_deserialise(crayon_savefile_detail
 	uint32_t data_length){
 	//Same as serialiser, but instead we extract the variables and version from the buffer
 	//We'll also need to check if the version number is valid (So we'll need to call the endianness function)
-	crayon_savefile_data_t data = details->save_data;
+	crayon_savefile_data_t data = details->savedata;
 
 	//Decode the version number
 	crayon_savefile_version_t version;
@@ -188,12 +188,12 @@ uint8_t __attribute__((weak)) crayon_savefile_deserialise(crayon_savefile_detail
 	buffer += sizeof(crayon_savefile_version_t);
 
 	crayon_misc_correct_endian((uint8_t*)&version, sizeof(crayon_savefile_version_t));
-	if(version > details->version){
+	if(version > details->latest_version){
 		return 1;
 	}
 	
 	//If same version, deserialising is as simple as serialising
-	if(version == details->version){
+	if(version == details->latest_version){
 		crayon_misc_encode_to_buffer((uint8_t*)data.doubles, buffer, sizeof(double) * data.lengths[CRAY_TYPE_DOUBLE]);
 		buffer += sizeof(double) * data.lengths[CRAY_TYPE_DOUBLE];
 
@@ -291,12 +291,12 @@ char *crayon_savefile_get_full_path(crayon_savefile_details_t *details, int8_t s
 	return path;
 }
 
-uint8_t crayon_savefile_get_memcard_bit(uint8_t memcard_bitmap, uint8_t save_device_id){
-	return (memcard_bitmap >> save_device_id) & 1;
+uint8_t crayon_savefile_get_device_bit(uint8_t device_bitmap, uint8_t save_device_id){
+	return (device_bitmap >> save_device_id) & 1;
 }
 
-void crayon_savefile_set_memcard_bit(uint8_t *memcard_bitmap, uint8_t save_device_id){
-	*memcard_bitmap |= (1 << save_device_id);
+void crayon_savefile_set_device_bit(uint8_t *device_bitmap, uint8_t save_device_id){
+	*device_bitmap |= (1 << save_device_id);
 	return;
 }
 
@@ -346,9 +346,11 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	crayon_savefile_version_t sf_version;
 	crayon_misc_encode_to_buffer((uint8_t*)&sf_version, (uint8_t*)pkg.data, sizeof(crayon_savefile_version_t));
 
-	if(sf_version > details->version){
+	details->savefile_versions[save_device_id] = sf_version;
+
+	if(sf_version > details->latest_version){
 		printf("FAILED AT 4\n");
-		return 2;
+		return 1;
 	}
 
 	#else
@@ -366,8 +368,9 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	crayon_savefile_version_t sf_version;
 	fseek(fp, CRAY_SF_HDR_SIZE, SEEK_SET);
 	fread(&sf_version, 4, 1, fp);
-
 	fclose(fp);
+
+	details->savefile_versions[save_device_id] = sf_version;
 
 	uint8_t rv = 0;
 	if(strcmp(app_id_buffer, details->strings[CRAY_SF_STRING_APP_ID])){
@@ -383,9 +386,9 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	// printf("read version %d. our version %d\n", sf_version, details->version);
 
 	//Check to confirm the savefile version is not newer than it should be
-	if(sf_version > details->version){
+	if(sf_version > details->latest_version){
 		printf("FAILED AT 7\n");
-		return 2;
+		return 1;
 	}
 
 	#endif
@@ -426,23 +429,27 @@ uint8_t crayon_savefile_set_path(char * path){
 
 //Make sure to call this first (And call the save icon and eyecatcher functions after since this overides them)
 uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details, const char *save_name,
-	crayon_savefile_version_t version){
+	crayon_savefile_version_t latest_version){
 	uint16_t save_name_length = strlen(save_name);
 
-	details->version = version;
+	details->latest_version = latest_version;
 
-	details->save_data.doubles = NULL;
-	details->save_data.floats = NULL;
-	details->save_data.u32 = NULL;
-	details->save_data.s32 = NULL;
-	details->save_data.u16 = NULL;
-	details->save_data.s16 = NULL;
-	details->save_data.u8 = NULL;
-	details->save_data.s8 = NULL;
-	details->save_data.chars = NULL;
+	details->savedata.doubles = NULL;
+	details->savedata.floats = NULL;
+	details->savedata.u32 = NULL;
+	details->savedata.s32 = NULL;
+	details->savedata.u16 = NULL;
+	details->savedata.s16 = NULL;
+	details->savedata.u8 = NULL;
+	details->savedata.s8 = NULL;
+	details->savedata.chars = NULL;
 	uint8_t i;
 	for(i = 0; i < CRAY_NUM_TYPES; i++){
-		details->save_data.lengths[i] = 0;
+		details->savedata.lengths[i] = 0;
+	}
+
+	for(i = 0; i < CRAY_SF_NUM_SAVE_DEVICES; i++){
+		details->savefile_versions[i] = 0;
 	}
 
 	details->save_size = 0;	//For now
@@ -493,7 +500,7 @@ uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details
 	strncpy(details->strings[CRAY_SF_STRING_FILENAME], save_name, save_name_length + 1);
 	details->strings[CRAY_SF_STRING_FILENAME][str_lengths[CRAY_SF_STRING_FILENAME] - 1] = '\0';
 
-	//Update the savefile and memcards stuff
+	//Update the VMU screen bitmap (Dreamcast only)
 	details->valid_vmu_screens = crayon_savefile_get_valid_screens();
 
 	details->save_device_id = -1;
@@ -639,7 +646,7 @@ crayon_savefile_history_t *crayon_savefile_add_variable(crayon_savefile_details_
 	var->removal_command = 0;
 	var->transfer_var = NULL;
 
-	details->save_data.lengths[var->data_type] += var->data_length;
+	details->savedata.lengths[var->data_type] += var->data_length;
 
 	//Store a pointer to the type and the default value
 	switch(var->data_type){
@@ -707,25 +714,25 @@ crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_detai
 	var->removal_command = remove_command;
 	var->transfer_var = transfer_var;
 
-	details->save_data.lengths[var->data_type] -= var->data_length;
+	details->savedata.lengths[var->data_type] -= var->data_length;
 
 	return var;
 }
 
 uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
-	uint32_t *lengths = details->save_data.lengths;
+	uint32_t *lengths = details->savedata.lengths;
 	uint32_t indexes[CRAY_NUM_TYPES] = {0};
 
 	//Don't both allocating space for these if we aren't using them
-	if(lengths[CRAY_TYPE_DOUBLE]){details->save_data.doubles = malloc(sizeof(double) * lengths[CRAY_TYPE_DOUBLE]);}
-	if(lengths[CRAY_TYPE_FLOAT]){details->save_data.floats = malloc(sizeof(float) * lengths[CRAY_TYPE_FLOAT]);}
-	if(lengths[CRAY_TYPE_UINT32]){details->save_data.u32 = malloc(sizeof(uint32_t) * lengths[CRAY_TYPE_UINT32]);}
-	if(lengths[CRAY_TYPE_SINT32]){details->save_data.s32 = malloc(sizeof(int32_t) * lengths[CRAY_TYPE_SINT32]);}
-	if(lengths[CRAY_TYPE_UINT16]){details->save_data.u16 = malloc(sizeof(uint16_t) * lengths[CRAY_TYPE_UINT16]);}
-	if(lengths[CRAY_TYPE_SINT16]){details->save_data.s16 = malloc(sizeof(int16_t) * lengths[CRAY_TYPE_SINT16]);}
-	if(lengths[CRAY_TYPE_UINT8]){details->save_data.u8 = malloc(sizeof(uint8_t) * lengths[CRAY_TYPE_UINT8]);}
-	if(lengths[CRAY_TYPE_SINT8]){details->save_data.s8 = malloc(sizeof(int8_t) * lengths[CRAY_TYPE_SINT8]);}
-	if(lengths[CRAY_TYPE_CHAR]){details->save_data.chars = malloc(sizeof(char) * lengths[CRAY_TYPE_CHAR]);}
+	if(lengths[CRAY_TYPE_DOUBLE]){details->savedata.doubles = malloc(sizeof(double) * lengths[CRAY_TYPE_DOUBLE]);}
+	if(lengths[CRAY_TYPE_FLOAT]){details->savedata.floats = malloc(sizeof(float) * lengths[CRAY_TYPE_FLOAT]);}
+	if(lengths[CRAY_TYPE_UINT32]){details->savedata.u32 = malloc(sizeof(uint32_t) * lengths[CRAY_TYPE_UINT32]);}
+	if(lengths[CRAY_TYPE_SINT32]){details->savedata.s32 = malloc(sizeof(int32_t) * lengths[CRAY_TYPE_SINT32]);}
+	if(lengths[CRAY_TYPE_UINT16]){details->savedata.u16 = malloc(sizeof(uint16_t) * lengths[CRAY_TYPE_UINT16]);}
+	if(lengths[CRAY_TYPE_SINT16]){details->savedata.s16 = malloc(sizeof(int16_t) * lengths[CRAY_TYPE_SINT16]);}
+	if(lengths[CRAY_TYPE_UINT8]){details->savedata.u8 = malloc(sizeof(uint8_t) * lengths[CRAY_TYPE_UINT8]);}
+	if(lengths[CRAY_TYPE_SINT8]){details->savedata.s8 = malloc(sizeof(int8_t) * lengths[CRAY_TYPE_SINT8]);}
+	if(lengths[CRAY_TYPE_CHAR]){details->savedata.chars = malloc(sizeof(char) * lengths[CRAY_TYPE_CHAR]);}
 
 	//Add in malloc error support
 	;
@@ -736,39 +743,39 @@ uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
 		if(var->version_removed == 0){	//We only give space to vars that still exist
 			switch(var->data_type){
 				case CRAY_TYPE_DOUBLE:
-					*var->data_ptr.doubles = &details->save_data.doubles[indexes[var->data_type]];
+					*var->data_ptr.doubles = &details->savedata.doubles[indexes[var->data_type]];
 					for(i = 0; i < var->data_length; i++){(*var->data_ptr.doubles)[i] = var->default_value.doubles;}
 					break;
 				case CRAY_TYPE_FLOAT:
-					*var->data_ptr.floats = &details->save_data.floats[indexes[var->data_type]];
+					*var->data_ptr.floats = &details->savedata.floats[indexes[var->data_type]];
 					for(i = 0; i < var->data_length; i++){(*var->data_ptr.floats)[i] = var->default_value.floats;}
 					break;
 				case CRAY_TYPE_UINT32:
-					*var->data_ptr.u32 = &details->save_data.u32[indexes[var->data_type]];
+					*var->data_ptr.u32 = &details->savedata.u32[indexes[var->data_type]];
 					for(i = 0; i < var->data_length; i++){(*var->data_ptr.u32)[i] = var->default_value.u32;}
 					break;
 				case CRAY_TYPE_SINT32:
-					*var->data_ptr.s32 = &details->save_data.s32[indexes[var->data_type]];
+					*var->data_ptr.s32 = &details->savedata.s32[indexes[var->data_type]];
 					for(i = 0; i < var->data_length; i++){(*var->data_ptr.s32)[i] = var->default_value.s32;}
 					break;
 				case CRAY_TYPE_UINT16:
-					*var->data_ptr.u16 = &details->save_data.u16[indexes[var->data_type]];
+					*var->data_ptr.u16 = &details->savedata.u16[indexes[var->data_type]];
 					for(i = 0; i < var->data_length; i++){(*var->data_ptr.u16)[i] = var->default_value.u16;}
 					break;
 				case CRAY_TYPE_SINT16:
-					*var->data_ptr.s16 = &details->save_data.s16[indexes[var->data_type]];
+					*var->data_ptr.s16 = &details->savedata.s16[indexes[var->data_type]];
 					for(i = 0; i < var->data_length; i++){(*var->data_ptr.s16)[i] = var->default_value.s16;}
 					break;
 				case CRAY_TYPE_UINT8:
-					*var->data_ptr.u8 = &details->save_data.u8[indexes[var->data_type]];
+					*var->data_ptr.u8 = &details->savedata.u8[indexes[var->data_type]];
 					for(i = 0; i < var->data_length; i++){(*var->data_ptr.u8)[i] = var->default_value.u8;}
 					break;
 				case CRAY_TYPE_SINT8:
-					*var->data_ptr.s8 = &details->save_data.s8[indexes[var->data_type]];
+					*var->data_ptr.s8 = &details->savedata.s8[indexes[var->data_type]];
 					for(i = 0; i < var->data_length; i++){(*var->data_ptr.s8)[i] = var->default_value.s8;}
 					break;
 				case CRAY_TYPE_CHAR:
-					*var->data_ptr.chars = &details->save_data.chars[indexes[var->data_type]];
+					*var->data_ptr.chars = &details->savedata.chars[indexes[var->data_type]];
 					memset(*var->data_ptr.chars, var->default_value.chars, var->data_length);
 				break;
 			}
@@ -794,7 +801,7 @@ uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
 	//If no savefile was found, then set our save device to the first valid memcard
 	if(details->save_device_id == -1){
 		for(i = 0; i < CRAY_SF_NUM_SAVE_DEVICES; i++){
-			if(crayon_savefile_get_memcard_bit(details->valid_memcards, i)){
+			if(crayon_savefile_get_device_bit(details->valid_devices, i)){
 				details->save_device_id = i;
 				break;
 			}
@@ -806,52 +813,52 @@ uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
 
 void crayon_savefile_update_valid_saves(crayon_savefile_details_t *details, uint8_t modes){
 	uint8_t valid_saves = 0;	//a1a2b1b2c1c2d1d2
-	uint8_t valid_memcards = 0;	//Note: These are memcards that either can or do contain savefiles
+	uint8_t valid_devices = 0;	//Note: These are devices that either can or do contain savefiles
 
 	uint8_t get_saves = 0;
-	uint8_t get_memcards = 0;
+	uint8_t get_devices = 0;
 
 	if(modes & CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT){
 		get_saves = 1;
 	}
-	if(modes & CRAY_SAVEFILE_UPDATE_MODE_MEMCARD_PRESENT){
-		get_memcards = 1;
+	if(modes & CRAY_SAVEFILE_UPDATE_MODE_DEVICE_PRESENT){
+		get_devices = 1;
 	}
 
-	uint8_t i, error;
+	uint8_t i;
 	for(i = 0; i < CRAY_SF_NUM_SAVE_DEVICES; i++){
 		//Check if device is a memory card
-		if(crayon_savefile_check_device_for_function(CRAY_SF_MEMCARD, i)){
+		if(crayon_savefile_check_device_for_function(CRAY_SF_STORAGE, i)){
 			continue;
 		}
 
 		//Check if a save file DNE. Returns 1 if DNE
-		error = crayon_savefile_check_savedata(details, i);
-		printf("ERROR %d\n", error);
-		if(error){
-			if(!get_memcards || error == 2){continue;}	//If 2 then the version is unsupported
+		if(crayon_savefile_check_savedata(details, i)){
+			if(!get_devices || details->savefile_versions[i] > details->latest_version){
+				continue;
+			}
 
 			#if defined(_arch_pc)	//We assume there's enough space on PC
 
-			crayon_savefile_set_memcard_bit(&valid_memcards, i);
+			crayon_savefile_set_device_bit(&valid_devices, i);
 
 			#else
 
 			if(crayon_savefile_get_device_free_blocks(i) >=
 				crayon_savefile_get_save_block_count(details)){
-				crayon_savefile_set_memcard_bit(&valid_memcards, i);
+				crayon_savefile_set_device_bit(&valid_devices, i);
 			}
 
 			#endif
 		}
 		else{
-			if(get_memcards){crayon_savefile_set_memcard_bit(&valid_memcards, i);}
-			if(get_saves){crayon_savefile_set_memcard_bit(&valid_saves, i);}
+			if(get_devices){crayon_savefile_set_device_bit(&valid_devices, i);}
+			if(get_saves){crayon_savefile_set_device_bit(&valid_saves, i);}
 		}
 	}
 
 	if(get_saves){details->valid_saves = valid_saves;}
-	if(get_memcards){details->valid_memcards = valid_memcards;}
+	if(get_devices){details->valid_devices = valid_devices;}
 
 	return;
 }
@@ -863,7 +870,7 @@ uint8_t crayon_savefile_get_valid_function(uint32_t function){
 	for(i = 0; i < CRAY_SF_NUM_SAVE_DEVICES; i++){
 		//Check if device contains this function bitmap (Returns 0 on success)
 		if(!crayon_savefile_check_device_for_function(function, i)){
-			crayon_savefile_set_memcard_bit(&valid_function, i);
+			crayon_savefile_set_device_bit(&valid_function, i);
 		}
 		
 	}
@@ -876,7 +883,7 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	//Also we use check for a memory card and not a savefile because the rest of the load code can automatically
 	//check if a save exists so its faster this way (Since this function and crayon_savefile_check_savedata()
 	//share alot of the same code)
-	if(crayon_savefile_check_device_for_function(CRAY_SF_MEMCARD, details->save_device_id)){
+	if(crayon_savefile_check_device_for_function(CRAY_SF_STORAGE, details->save_device_id)){
 		printf("Test1\n");
 		return 1;
 	}
@@ -956,13 +963,13 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 
 	//The requested VMU is not a valid memory card
-	if(!crayon_savefile_get_memcard_bit(details->valid_memcards, details->save_device_id)){
+	if(!crayon_savefile_get_device_bit(details->valid_devices, details->save_device_id)){
 		return 1;
 	}
 
 	//If you call everying in the right order, this is redundant
 	//But just incase you didn't, here it is
-	if(crayon_savefile_check_device_for_function(CRAY_SF_MEMCARD, details->save_device_id)){
+	if(crayon_savefile_check_device_for_function(CRAY_SF_STORAGE, details->save_device_id)){
 		return 1;
 	}
 
@@ -1070,7 +1077,7 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 }
 
 uint8_t crayon_savefile_delete_savedata(crayon_savefile_details_t *details){
-	if(crayon_savefile_check_device_for_function(CRAY_SF_MEMCARD, details->save_device_id)){
+	if(crayon_savefile_check_device_for_function(CRAY_SF_STORAGE, details->save_device_id)){
 		return 1;
 	}
 
@@ -1116,29 +1123,29 @@ void crayon_savefile_free(crayon_savefile_details_t *details){
 	details->history_tail = NULL;
 
 	//Free up the actual save data;
-	if(details->save_data.doubles){free(details->save_data.doubles);}
-	if(details->save_data.floats){free(details->save_data.floats);}
-	if(details->save_data.u32){free(details->save_data.u32);}
-	if(details->save_data.s32){free(details->save_data.s32);}
-	if(details->save_data.u16){free(details->save_data.u16);}
-	if(details->save_data.s16){free(details->save_data.s16);}
-	if(details->save_data.u8){free(details->save_data.u8);}
-	if(details->save_data.s8){free(details->save_data.s8);}
-	if(details->save_data.chars){free(details->save_data.chars);}
+	if(details->savedata.doubles){free(details->savedata.doubles);}
+	if(details->savedata.floats){free(details->savedata.floats);}
+	if(details->savedata.u32){free(details->savedata.u32);}
+	if(details->savedata.s32){free(details->savedata.s32);}
+	if(details->savedata.u16){free(details->savedata.u16);}
+	if(details->savedata.s16){free(details->savedata.s16);}
+	if(details->savedata.u8){free(details->savedata.u8);}
+	if(details->savedata.s8){free(details->savedata.s8);}
+	if(details->savedata.chars){free(details->savedata.chars);}
 
-	details->save_data.doubles = NULL;
-	details->save_data.floats = NULL;
-	details->save_data.u32 = NULL;
-	details->save_data.s32 = NULL;
-	details->save_data.u16 = NULL;
-	details->save_data.s16 = NULL;
-	details->save_data.u8 = NULL;
-	details->save_data.s8 = NULL;
-	details->save_data.chars = NULL;
+	details->savedata.doubles = NULL;
+	details->savedata.floats = NULL;
+	details->savedata.u32 = NULL;
+	details->savedata.s32 = NULL;
+	details->savedata.u16 = NULL;
+	details->savedata.s16 = NULL;
+	details->savedata.u8 = NULL;
+	details->savedata.s8 = NULL;
+	details->savedata.chars = NULL;
 
 	uint8_t i;
 	for(i = 0; i < CRAY_NUM_TYPES; i++){
-		details->save_data.lengths[i] = 0;
+		details->savedata.lengths[i] = 0;
 	}
 
 	for(i = 0; i < CRAY_SF_NUM_DETAIL_STRINGS; i++){

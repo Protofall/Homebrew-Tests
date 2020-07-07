@@ -104,13 +104,13 @@ typedef struct crayon_savefile_history{
 #if defined( _arch_dreamcast)
 
 	#define CRAY_SF_NUM_SAVE_DEVICES 8
-	#define CRAY_SF_MEMCARD MAPLE_FUNC_MEMCARD
+	#define CRAY_SF_STORAGE MAPLE_FUNC_MEMCARD
 	#define CRAY_SF_HDR_SIZE sizeof(vmu_hdr_t)
 
 #elif defined(_arch_pc)
 
 	#define CRAY_SF_NUM_SAVE_DEVICES 1
-	#define CRAY_SF_MEMCARD 1
+	#define CRAY_SF_STORAGE 1
 
 	#define CRAY_SF_HDR_SIZE (16 + 16 + 32 + sizeof(uint32_t))
 	typedef struct crayon_savefile_hdr{
@@ -130,9 +130,9 @@ typedef struct crayon_savefile_history{
 //by reference into a function and if you want to modify the save file data easily
 //or even use different save files for one game
 typedef struct crayon_savefile_details{
-	crayon_savefile_version_t version;
+	crayon_savefile_version_t latest_version;
 
-	crayon_savefile_data_t save_data;
+	crayon_savefile_data_t savedata;
 	size_t save_size;	//Might move this inside the data var
 
 	unsigned char *icon_data;		//uint8_t
@@ -149,14 +149,17 @@ typedef struct crayon_savefile_details{
 	//All the strings we have. Different systems might have a different number of strings
 	char *strings[CRAY_SF_NUM_DETAIL_STRINGS];
 
-	uint8_t valid_memcards;		//Memory cards with enough space for a save file or an existing save
-	uint8_t valid_saves;		//All VMUs with a savefile
+	uint8_t valid_devices;		//Devices/Memory cards with enough space for a save file or an existing save
+	uint8_t valid_saves;		//All VMUs with a savefile (Version is latest or older)
+	crayon_savefile_version_t savefile_versions[CRAY_SF_NUM_SAVE_DEVICES];	//Stores the versions of saves.
+																			//0 if no valid savefile is present there
+
 	uint8_t valid_vmu_screens;	//All VMU screens (Only applies for DC)
 
 	//This tells us what storage system we save to
 	//On Dreamcast this corresponds to one of the 8 memory cards
 	//On PC there is only one, the savefile folder
-	//And technically if the saturn was supported, it would have internal storage + save cartridge
+	//And technically if the saturn was supported, it would have internal storage + save cartridge (2)
 	int8_t save_device_id;
 
 	crayon_savefile_history_t *history;
@@ -193,10 +196,10 @@ char *crayon_savefile_get_full_path(crayon_savefile_details_t *details, int8_t s
 //---------------Both internal and external----------------
 
 
-uint8_t crayon_savefile_get_memcard_bit(uint8_t memcard_bitmap, uint8_t save_device_id);	//Returns boolean
-void crayon_savefile_set_memcard_bit(uint8_t *memcard_bitmap, uint8_t save_device_id);	//Updates memcard_bitmap
+uint8_t crayon_savefile_get_device_bit(uint8_t device_bitmap, uint8_t save_device_id);	//Returns boolean
+void crayon_savefile_set_device_bit(uint8_t *device_bitmap, uint8_t save_device_id);	//Updates device_bitmap
 
-//Returns 0 if a savefile on that device exists, 1 if there's an error/DNE and 2 if the savefile is of a newer version
+//Returns 0 if a savefile on that device exists, 1 if there's an error/DNE/version is newer than latest
 uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_t save_device_id);
 
 
@@ -209,7 +212,7 @@ uint8_t crayon_savefile_set_path(char * path);	//On Dreamcast this is always "/v
 	//Note that you should also add the icon/eyecatcher if you want and set all the strings
 	//as well as the variable history
 uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details, const char *save_name,
-	crayon_savefile_version_t version);
+	crayon_savefile_version_t latest_version);
 
 #define crayon_savefile_set_app_id(details, string) \
 crayon_savefile_set_string(details, string, CRAY_SF_STRING_APP_ID);
@@ -240,10 +243,10 @@ crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_detai
 //Once the history is fully constructed, we can then build our actual savefile with this fuction
 uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details);
 
-//This function will update the valid memcards and/or the current savefile bitmaps
-#define CRAY_SAVEFILE_UPDATE_MODE_MEMCARD_PRESENT (1 << 0)
+//This function will update the valid devices and/or the current savefile bitmaps
+#define CRAY_SAVEFILE_UPDATE_MODE_DEVICE_PRESENT (1 << 0)
 #define CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT (1 << 1)
-#define CRAY_SAVEFILE_UPDATE_MODE_BOTH CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT | CRAY_SAVEFILE_UPDATE_MODE_MEMCARD_PRESENT
+#define CRAY_SAVEFILE_UPDATE_MODE_BOTH CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT | CRAY_SAVEFILE_UPDATE_MODE_DEVICE_PRESENT
 void crayon_savefile_update_valid_saves(crayon_savefile_details_t *details, uint8_t modes);
 
 //Returns an 8 bit var for each VMU (a1a2b1b2c1c2d1d2)
