@@ -101,8 +101,7 @@ int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t *details)
 	}
 
 	//Get the total number of bytes. Keep in mind we need to think about the icon/s and EC
-	size_t size = CRAY_SF_HDR_SIZE + (512 * details->icon_anim_count) + eyecatcher_size +
-		sizeof(crayon_savefile_version_t) + details->save_size;
+	size_t size = CRAY_SF_HDR_SIZE + (512 * details->icon_anim_count) + eyecatcher_size + details->savedata_size;
 
 	return crayon_savefile_bytes_to_blocks(size);
 
@@ -452,7 +451,7 @@ uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details
 		details->savefile_versions[i] = 0;
 	}
 
-	details->save_size = 0;	//For now
+	details->savedata_size = 0;	//For now
 	details->icon_anim_count = 0;
 
 	#ifdef _arch_dreamcast
@@ -785,7 +784,8 @@ uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
 		var = var->next;
 	}
 
-	details->save_size = (lengths[CRAY_TYPE_DOUBLE] * sizeof(double)) +
+	details->savedata_size = sizeof(crayon_savefile_version_t) +
+		(lengths[CRAY_TYPE_DOUBLE] * sizeof(double)) +
 		(lengths[CRAY_TYPE_FLOAT] * sizeof(float)) +
 		(lengths[CRAY_TYPE_UINT32] * sizeof(uint32_t)) +
 		(lengths[CRAY_TYPE_SINT32] * sizeof(int32_t)) +
@@ -980,7 +980,7 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 
 	FILE *fp;
 
-	uint32_t length = sizeof(crayon_savefile_version_t) + details->save_size;
+	uint32_t length = details->savedata_size;
 	uint8_t *data = malloc(length);
 	if(!data){
 		free(savename);

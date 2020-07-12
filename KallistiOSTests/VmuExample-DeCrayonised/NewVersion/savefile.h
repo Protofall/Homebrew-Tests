@@ -133,7 +133,7 @@ typedef struct crayon_savefile_details{
 	crayon_savefile_version_t latest_version;
 
 	crayon_savefile_data_t savedata;
-	size_t save_size;	//Might move this inside the data var
+	size_t savedata_size;	//Might move this inside the data var
 
 	unsigned char *icon_data;		//uint8_t
 	unsigned short *icon_palette;	//uint16_t
