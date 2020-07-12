@@ -428,7 +428,10 @@ uint8_t crayon_savefile_set_path(char * path){
 
 //Make sure to call this first (And call the save icon and eyecatcher functions after since this overides them)
 uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details, const char *save_name,
-	crayon_savefile_version_t latest_version){
+	crayon_savefile_version_t latest_version, void (*default_values_func)(),
+	uint8_t (*update_savefile_func)(crayon_savefile_data_t*, crayon_savefile_data_t*,
+	crayon_savefile_version_t, crayon_savefile_version_t)){
+
 	uint16_t save_name_length = strlen(save_name);
 
 	details->latest_version = latest_version;
@@ -506,6 +509,9 @@ uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details
 
 	details->history = NULL;
 	details->history_tail = NULL;
+
+	details->default_values_func = default_values_func;
+	details->update_savefile_func = update_savefile_func;
 
 	return 0;
 }
@@ -617,15 +623,24 @@ uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t *details, const
 	return 0;
 }
 
-crayon_savefile_history_t *crayon_savefile_add_variable(crayon_savefile_details_t *details, void *data_ptr,
-	uint8_t data_type, uint32_t length, const void *default_value, crayon_savefile_version_t version){
+int32_t crayon_savefile_add_variable(crayon_savefile_details_t *details, void *data_ptr, uint8_t data_type, 
+	uint32_t length, crayon_savefile_version_t version_added, crayon_savefile_version_t version_removed){
+
+	static int32_t id = 0;
+	if(id < 0){
+		printf("You managed to make 2,147,483,648 unique variables\nI think you're doing something wrong\n");
+		return -1;
+	}
+
+	printf("id is: %d\n", id);
+
 	//data_type id doesn't map to any of our types
 	if(data_type >= CRAY_NUM_TYPES){
-		return NULL;
+		return -1;
 	}
 
 	crayon_savefile_history_t *var = malloc(sizeof(crayon_savefile_history_t));
-	if(!var){return NULL;}
+	if(!var){return -1;}
 
 	//Add the new variable
 	var->next = NULL;
@@ -638,12 +653,12 @@ crayon_savefile_history_t *crayon_savefile_add_variable(crayon_savefile_details_
 		details->history_tail = var;
 	}
 
+	var->id = id;
+
 	var->data_type = data_type;
 	var->data_length = length;
-	var->version_added = version;
-	var->version_removed = 0;	//0 means it wasn't removed
-	var->removal_command = 0;
-	var->transfer_var = NULL;
+	var->version_added = version_added;
+	var->version_removed = version_removed;
 
 	details->savedata.lengths[var->data_type] += var->data_length;
 
@@ -651,71 +666,34 @@ crayon_savefile_history_t *crayon_savefile_add_variable(crayon_savefile_details_
 	switch(var->data_type){
 		case CRAY_TYPE_DOUBLE:
 			var->data_ptr.doubles = (double**)data_ptr;
-			var->default_value.doubles = *((double*)default_value);
 			break;
 		case CRAY_TYPE_FLOAT:
 			var->data_ptr.floats = (float**)data_ptr;
-			var->default_value.floats = *((float*)default_value);
 			break;
 		case CRAY_TYPE_UINT32:
 			var->data_ptr.u32 = (uint32_t**)data_ptr;
-			var->default_value.u32 = *((uint32_t*)default_value);
 			break;
 		case CRAY_TYPE_SINT32:
 			var->data_ptr.s32 = (int32_t**)data_ptr;
-			var->default_value.s32 = *((int32_t*)default_value);
 			break;
 		case CRAY_TYPE_UINT16:
 			var->data_ptr.u16 = (uint16_t**)data_ptr;
-			var->default_value.u16 = *((uint16_t*)default_value);
 			break;
 		case CRAY_TYPE_SINT16:
 			var->data_ptr.s16 = (int16_t**)data_ptr;
-			var->default_value.s16 = *((int16_t*)default_value);
 			break;
 		case CRAY_TYPE_UINT8:
 			var->data_ptr.u8 = (uint8_t**)data_ptr;
-			var->default_value.u8 = *((uint8_t*)default_value);
 			break;
 		case CRAY_TYPE_SINT8:
 			var->data_ptr.s8 = (int8_t**)data_ptr;
-			var->default_value.s8 = *((int8_t*)default_value);
 			break;
 		case CRAY_TYPE_CHAR:
 			var->data_ptr.chars = (char**)data_ptr;
-			var->default_value.chars = *((char*)default_value);
 			break;
 	}
 
-	return var;
-}
-
-crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_details_t *details,
-	crayon_savefile_history_t *target_node, uint8_t remove_command, crayon_savefile_history_t *transfer_var,
-	crayon_savefile_version_t version){
-
-	crayon_savefile_history_t *var = details->history;
-	uint8_t found = 0;
-
-	while(var){
-		if(var == target_node){
-			found = 1;
-			break;
-		}
-		var = var->next;
-	}
-
-	if(!found){
-		return NULL;
-	}
-
-	var->version_removed = version;
-	var->removal_command = remove_command;
-	var->transfer_var = transfer_var;
-
-	details->savedata.lengths[var->data_type] -= var->data_length;
-
-	return var;
+	return id;
 }
 
 uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
@@ -743,46 +721,39 @@ uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
 			switch(var->data_type){
 				case CRAY_TYPE_DOUBLE:
 					*var->data_ptr.doubles = &details->savedata.doubles[indexes[var->data_type]];
-					for(i = 0; i < var->data_length; i++){(*var->data_ptr.doubles)[i] = var->default_value.doubles;}
 					break;
 				case CRAY_TYPE_FLOAT:
 					*var->data_ptr.floats = &details->savedata.floats[indexes[var->data_type]];
-					for(i = 0; i < var->data_length; i++){(*var->data_ptr.floats)[i] = var->default_value.floats;}
 					break;
 				case CRAY_TYPE_UINT32:
 					*var->data_ptr.u32 = &details->savedata.u32[indexes[var->data_type]];
-					for(i = 0; i < var->data_length; i++){(*var->data_ptr.u32)[i] = var->default_value.u32;}
 					break;
 				case CRAY_TYPE_SINT32:
 					*var->data_ptr.s32 = &details->savedata.s32[indexes[var->data_type]];
-					for(i = 0; i < var->data_length; i++){(*var->data_ptr.s32)[i] = var->default_value.s32;}
 					break;
 				case CRAY_TYPE_UINT16:
 					*var->data_ptr.u16 = &details->savedata.u16[indexes[var->data_type]];
-					for(i = 0; i < var->data_length; i++){(*var->data_ptr.u16)[i] = var->default_value.u16;}
 					break;
 				case CRAY_TYPE_SINT16:
 					*var->data_ptr.s16 = &details->savedata.s16[indexes[var->data_type]];
-					for(i = 0; i < var->data_length; i++){(*var->data_ptr.s16)[i] = var->default_value.s16;}
 					break;
 				case CRAY_TYPE_UINT8:
 					*var->data_ptr.u8 = &details->savedata.u8[indexes[var->data_type]];
-					for(i = 0; i < var->data_length; i++){(*var->data_ptr.u8)[i] = var->default_value.u8;}
 					break;
 				case CRAY_TYPE_SINT8:
 					*var->data_ptr.s8 = &details->savedata.s8[indexes[var->data_type]];
-					for(i = 0; i < var->data_length; i++){(*var->data_ptr.s8)[i] = var->default_value.s8;}
 					break;
 				case CRAY_TYPE_CHAR:
 					*var->data_ptr.chars = &details->savedata.chars[indexes[var->data_type]];
-					memset(*var->data_ptr.chars, var->default_value.chars, var->data_length);
 				break;
 			}
 			indexes[var->data_type] += var->data_length;
 		}
-
 		var = var->next;
 	}
+
+	//Set the default values with the user's function
+	(*details->default_values_func)();
 
 	details->savedata_size = sizeof(crayon_savefile_version_t) +
 		(lengths[CRAY_TYPE_DOUBLE] * sizeof(double)) +
@@ -941,7 +912,7 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	//(The later should never trigger if you use this library right)
 	if(hdr.data_size != pkg_size - CRAY_SF_HDR_SIZE || strcmp(hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
 		free(data);
-		printf("%d, %d\n", hdr.data_size, pkg_size - CRAY_SF_HDR_SIZE);
+		printf("%d, %ld\n", hdr.data_size, pkg_size - CRAY_SF_HDR_SIZE);
 		printf("%s %s\n", hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID]);
 		printf("Test5\n");
 		return 1;

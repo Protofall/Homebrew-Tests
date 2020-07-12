@@ -30,6 +30,19 @@ enum {
 	CRAY_NUM_TYPES	//This will be the number of types we have available
 };
 
+//We don't need to store the type, since the user should know which one it is
+union crayon_savefile_variable_ptr{
+	double *doubles;
+	float *floats;
+	uint32_t *u32;
+	int32_t *s32;
+	uint16_t *u16;
+	int16_t *s16;
+	uint8_t *u8;
+	int8_t *s8;
+	char *chars;
+} crayon_savefile_variable_ptr_t;
+
 //This is never accessed directly, but it will contain all of you variables that will get saved
 typedef struct crayon_savefile_data{
 	double *doubles;
@@ -45,27 +58,16 @@ typedef struct crayon_savefile_data{
 	uint32_t lengths[9];	//The lengths are in the order they appear above
 } crayon_savefile_data_t;
 
-//When you remove a var, these determine how we handle it
-	//0 is forget the old value, all the others combine it with an existing var
-	//5 is to override the value of the dest var with the value of the deleted var
-		//(Good if you want to change a var size)
-#define CRAY_SF_REMOVE_CMD_DEFAULT  0
-#define CRAY_SF_REMOVE_CMD_ADD      1
-#define CRAY_SF_REMOVE_CMD_SUBTRACT 2
-#define CRAY_SF_REMOVE_CMD_MULTIPLY 3
-#define CRAY_SF_REMOVE_CMD_DIVIDE   4
-#define CRAY_SF_REMOVE_CMD_REPLACE  5
-
 #define crayon_savefile_version_t uint32_t	//If you know you won't have many versions, change this to a uint8_t
 											//But don't change it mid way through a project
 
 typedef struct crayon_savefile_history{
+	uint32_t id;
+
 	uint8_t data_type;
 	uint32_t data_length;
 	crayon_savefile_version_t version_added;
-	crayon_savefile_version_t version_removed;	//0 is not removed
-	uint8_t removal_command;
-	struct crayon_savefile_history *transfer_var;
+	crayon_savefile_version_t version_removed;	//0 is still present in the current version
 
 	//Add some unions here for the pointer to the data and the default value
 	union{
@@ -80,26 +82,16 @@ typedef struct crayon_savefile_history{
 		char **chars;
 	} data_ptr;
 
-	union{
-		uint8_t u8;
-		uint16_t u16;
-		uint32_t u32;
-		int8_t s8;
-		int16_t s16;
-		int32_t s32;
-		float floats;
-		double doubles;
-		char chars;
-	} default_value;
-
 	struct crayon_savefile_history *next;
 } crayon_savefile_history_t;
 
-#define CRAY_SF_NUM_DETAIL_STRINGS 4
-#define CRAY_SF_STRING_FILENAME    0
-#define CRAY_SF_STRING_APP_ID      1
-#define CRAY_SF_STRING_SHORT_DESC  2
-#define CRAY_SF_STRING_LONG_DESC   3
+enum {
+	CRAY_SF_STRING_FILENAME = 0,
+	CRAY_SF_STRING_APP_ID,
+	CRAY_SF_STRING_SHORT_DESC,
+	CRAY_SF_STRING_LONG_DESC,
+	CRAY_SF_NUM_DETAIL_STRINGS	// 4
+};
 
 #if defined( _arch_dreamcast)
 
@@ -164,6 +156,10 @@ typedef struct crayon_savefile_details{
 
 	crayon_savefile_history_t *history;
 	crayon_savefile_history_t *history_tail;	//Just used to speed stuff the history building process
+
+	void (*default_values_func)();
+	uint8_t (*update_savefile_func)(crayon_savefile_data_t*, crayon_savefile_data_t*,
+	crayon_savefile_version_t, crayon_savefile_version_t);
 } crayon_savefile_details_t;
 
 
@@ -208,11 +204,15 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 
 uint8_t crayon_savefile_set_path(char * path);	//On Dreamcast this is always "/vmu/" and it will ignore the param
 
-//Make sure to call this on a new savefile details struct otherwise you can get strange results
-	//Note that you should also add the icon/eyecatcher if you want and set all the strings
-	//as well as the variable history
+//Make sure to call this on a new savefile details struct otherwise you can get strange results if
+	//you use it without this. The last two parameters are function pointers to user defined default
+	//values and how to handling going up a version
+//Note that you should also add the icon/eyecatcher if you want and set all the strings as well as
+	//the variable history.
 uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details, const char *save_name,
-	crayon_savefile_version_t latest_version);
+	crayon_savefile_version_t latest_version, void (*default_values_func)(),
+	uint8_t (*update_savefile_func)(crayon_savefile_data_t*, crayon_savefile_data_t*,
+	crayon_savefile_version_t, crayon_savefile_version_t));
 
 #define crayon_savefile_set_app_id(details, string) \
 crayon_savefile_set_string(details, string, CRAY_SF_STRING_APP_ID);
@@ -230,15 +230,15 @@ uint8_t crayon_savefile_add_icon(crayon_savefile_details_t *details, const char 
 
 uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t *details, const char *eyecatch_path);
 
-//Default value is just one element because having default arrays (Eg for c-strings) would be too complex in C
-//So instead all elements are set to the value pointed to by default_value
-crayon_savefile_history_t *crayon_savefile_add_variable(crayon_savefile_details_t *details, void *data_ptr,
-	uint8_t data_type, uint32_t length, const void *default_value, crayon_savefile_version_t version);
+//Return type is the id of the variable. Starts at 1, if the function returns 0 then an error occured
+//Note that if a variable still exists, for version_removed we set it to zero
+int32_t crayon_savefile_add_variable(crayon_savefile_details_t *details, void *data_ptr, uint8_t data_type, 
+	uint32_t length, crayon_savefile_version_t version_added, crayon_savefile_version_t version_removed);
 
 //Pass in the pointer to the variable node we want to delete
-crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_details_t *details,
-	crayon_savefile_history_t *target_node, uint8_t remove_command, crayon_savefile_history_t *transfer_var,
-	crayon_savefile_version_t version);
+// crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_details_t *details,
+// 	crayon_savefile_history_t *target_node, uint8_t remove_command, crayon_savefile_history_t *transfer_var,
+// 	crayon_savefile_version_t version);
 
 //Once the history is fully constructed, we can then build our actual savefile with this fuction
 uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details);

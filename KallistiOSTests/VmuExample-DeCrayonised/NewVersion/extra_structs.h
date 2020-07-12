@@ -31,17 +31,14 @@ typedef struct my_savefile_var{
 uint16_t * sf_var1;
 #define sf_var1_type CRAY_TYPE_UINT16
 #define sf_var1_length 1	//If you want, these length defines could be unsigned int consts.
-static const uint16_t sf_var1_default = 300;
 
 float * sf_var2;
 #define sf_var2_type CRAY_TYPE_FLOAT
 #define sf_var2_length 1
-static const float sf_var2_default = 5.5;
 
 uint8_t * sf_var3;
 #define sf_var3_type CRAY_TYPE_UINT8
 #define sf_var3_length 1
-static const uint8_t sf_var3_default = 27;
 
 //Now the "other_struct"
 #define sf_var4_length 10
@@ -49,17 +46,14 @@ static const uint8_t sf_var3_default = 27;
 uint8_t * sf_lol[sf_var4_length];
 #define sf_lol_type CRAY_TYPE_UINT8
 #define sf_lol_length 1
-static const uint8_t sf_lol_default = 0;
 
 int32_t * sf_hi[sf_var4_length];
 #define sf_hi_type CRAY_TYPE_SINT32
 #define sf_hi_length 2
-static const int32_t sf_hi_default = -1;
 
-char * sf_name[sf_var4_length];
+char * sf_name[sf_var4_length];	// "sf_var4_length" strings with 16 chars each
 #define sf_name_type CRAY_TYPE_CHAR
 #define sf_name_length 16
-static const char sf_name_default = 'A';
 
 //For those unfamiliar with enum, a value with no assigned number is equal to the previous value plus 1
 //Also you just use the variable name like a constant, not "savefile_version.sf_initial" or something

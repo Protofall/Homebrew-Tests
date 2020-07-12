@@ -97,9 +97,9 @@ int main(){
 	uint8_t load_error = crayon_savefile_load_savedata(&savefile_details);	//If a savefile DNE this fails
 
 	//Change vars here
-	sf_var1[0] = 2997;
-	sf_var2[0] += 5.25;
-	sf_name[2][3] = '1';
+	// sf_var1[0] = 2997;
+	// sf_var2[0] += 5.25;
+	// sf_name[2][3] = '1';
 
 	uint8_t save_error = 1;
 	if(savefile_details.valid_devices){
@@ -163,7 +163,7 @@ int main(){
 
 	char buffer[70];
 	if(!setup_res){
-		sprintf(buffer, "Save initialised\nUses %ld bytes", CRAY_SF_HDR_SIZE + savefile_details.save_size);
+		sprintf(buffer, "Save initialised\nUses %ld bytes", CRAY_SF_HDR_SIZE + savefile_details.savedata_size);
 	}
 	else{
 		sprintf(buffer, "It failed with code %d", setup_res);

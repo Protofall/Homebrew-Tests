@@ -1,5 +1,40 @@
 #include "setup.h"
 
+//NOTE: This function contains the default values only for the current version
+//Thats why we can reference the variables directly like this
+void savefile_defaults(){
+	sf_var1[0] = 300;
+	sf_var2[0] = 5.5;
+	sf_var3[0] = 27;
+
+	uint16_t i, j;
+	for(i = 0; i < sf_var4_length; i++){
+		sf_lol[i] = 0;
+
+		for(j = 0; j < sf_hi_length; j++){
+			sf_hi[i][j] = -1;
+		}
+
+		//I use strncpy instead of strcpy so we know the value
+		//of all characters in the buffer
+		strncpy(sf_name[i], "PLACEHOLDER", sf_name_length);
+	}
+
+	return;
+}
+
+//In this function, we don't handle the variables directly like normal, since some of
+//them don't exist anymore. So instead we refer to them by their history IDs like so
+
+//Need a function to get var "x" from the crayon_savefile_data_t
+//THIS IS USED BY THE CRAYON SAVEFILE DESERIALISER WHEN LOADING A SAVE FROM AN OLDER VERSION
+uint8_t update_savefile(crayon_savefile_data_t *loaded_data, crayon_savefile_data_t *latest_data,
+	crayon_savefile_version_t loaded_version, crayon_savefile_version_t latest_version){
+	;
+
+	return 0;
+}
+
 uint8_t setup_savefile(crayon_savefile_details_t * details){
 	uint8_t i, error;
 
@@ -9,19 +44,18 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 
 	#else
 	
-	crayon_savefile_set_path(NULL);	//Dreamcast ignore the parameter anyways
-											//(Assumes "/vmu/") so its still fine to
-											//do the method above for all platforms
+	crayon_savefile_set_path(NULL);	//Dreamcast ignores the parameter anyways
+									//(Assumes "/vmu/") so its still fine to
+									//do the method above for all platforms
 	#endif
 
-	error = crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", sf_current_version);
+	error = crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", sf_current_version,
+		savefile_defaults, update_savefile);
 	if(error){printf("ERROR, savefile couldn't be created\n");}
 	error += crayon_savefile_set_app_id(details, "ProtoSaveDemo3");
 	error += crayon_savefile_set_short_desc(details, "Save Demo");
 	error += crayon_savefile_set_long_desc(details, "Crayon's VMU demo");
 	if(error){printf("ERROR, Savefile string too long\n");}
-
-	if(error){while(1);}
 
 	#ifdef _arch_dreamcast
 
@@ -48,13 +82,13 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 	#endif
 
 	//Now lets construct our history
-	crayon_savefile_add_variable(details, &sf_var1, sf_var1_type, sf_var1_length, &sf_var1_default, sf_initial);
-	crayon_savefile_add_variable(details, &sf_var2, sf_var2_type, sf_var2_length, &sf_var2_default, sf_initial);
-	crayon_savefile_add_variable(details, &sf_var3, sf_var3_type, sf_var3_length, &sf_var3_default, sf_initial);
+	crayon_savefile_add_variable(details, &sf_var1, sf_var1_type, sf_var1_length, sf_initial, 0);
+	crayon_savefile_add_variable(details, &sf_var2, sf_var2_type, sf_var2_length, sf_initial, 0);
+	crayon_savefile_add_variable(details, &sf_var3, sf_var3_type, sf_var3_length, sf_initial, 0);
 	for(i = 0; i < sf_var4_length; i++){
-		crayon_savefile_add_variable(details, &sf_lol[i], sf_lol_type, sf_lol_length, &sf_lol_default, sf_initial);
-		crayon_savefile_add_variable(details, &sf_hi[i], sf_hi_type, sf_hi_length, &sf_hi_default, sf_initial);
-		crayon_savefile_add_variable(details, &sf_name[i], sf_name_type, sf_name_length, &sf_name_default, sf_initial);
+		crayon_savefile_add_variable(details, &sf_lol[i], sf_lol_type, sf_lol_length, sf_initial, 0);
+		crayon_savefile_add_variable(details, &sf_hi[i], sf_hi_type, sf_hi_length, sf_initial, 0);
+		crayon_savefile_add_variable(details, &sf_name[i], sf_name_type, sf_name_length, sf_initial, 0);
 	}
 
 	//Set the savefile
