@@ -38,7 +38,7 @@
 
 
 // COMMAND
-// make clean-pc && make pc && cp old/v0/SAVE_DEMO3.s saves/
+// make clean-pc && make pc && cp pc_savefile_backups/v0-Modified/SAVE_DEMO3.s saves/
 
 
 
