@@ -31,16 +31,17 @@ enum {
 };
 
 //We don't need to store the type, since the user should know which one it is
-union crayon_savefile_variable_ptr{
-	double *doubles;
-	float *floats;
-	uint32_t *u32;
-	int32_t *s32;
-	uint16_t *u16;
-	int16_t *s16;
-	uint8_t *u8;
-	int8_t *s8;
-	char *chars;
+	//WHY AM I USING A UNION-OF-POINTERS INSTEAD OF A VOID POINTER. Both are 8 bytes in size, right?
+typedef union crayon_savefile_variable_ptr{
+	double *type_double;
+	float *type_float;
+	uint32_t *type_u32;
+	int32_t *type_s32;
+	uint16_t *type_u16;
+	int16_t *type_s16;
+	uint8_t *type_u8;
+	int8_t *type_s8;
+	char *type_char;
 } crayon_savefile_variable_ptr_t;
 
 //This is never accessed directly, but it will contain all of you variables that will get saved
@@ -55,7 +56,7 @@ typedef struct crayon_savefile_data{
 	int8_t *s8;
 	char *chars;
 
-	uint32_t lengths[9];	//The lengths are in the order they appear above
+	uint32_t lengths[CRAY_NUM_TYPES];	//The lengths are in the order they appear above
 } crayon_savefile_data_t;
 
 #define crayon_savefile_version_t uint32_t	//If you know you won't have many versions, change this to a uint8_t
@@ -104,7 +105,7 @@ enum {
 	#define CRAY_SF_NUM_SAVE_DEVICES 1
 	#define CRAY_SF_STORAGE 1
 
-	#define CRAY_SF_HDR_SIZE (16 + 16 + 32 + sizeof(uint32_t))
+	#define CRAY_SF_HDR_SIZE (16 + 16 + 32 + sizeof(uint32_t))	//Must be a multiple of 4 bytes long
 	typedef struct crayon_savefile_hdr{
 		char app_id[16];
 		char short_desc[16];
@@ -156,6 +157,7 @@ typedef struct crayon_savefile_details{
 
 	crayon_savefile_history_t *history;
 	crayon_savefile_history_t *history_tail;	//Just used to speed stuff the history building process
+	uint32_t num_vars;
 
 	void (*default_values_func)();
 	uint8_t (*update_savefile_func)(crayon_savefile_data_t*, crayon_savefile_data_t*,
@@ -180,14 +182,19 @@ int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t *details)
 
 uint16_t crayon_savefile_detail_string_length(uint8_t string_id);
 
-void __attribute__((weak)) crayon_savefile_serialise(crayon_savefile_details_t *details, uint8_t *buffer);
-uint8_t __attribute__((weak)) crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *buffer,
-	uint32_t data_length);
+void crayon_savefile_serialise(crayon_savefile_details_t *details, uint8_t *buffer);
+uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *buffer, uint32_t data_length);
 
 uint16_t crayon_savefile_get_device_free_blocks(int8_t device_id);
 
 //Returns a pointer on success, returns NULL if either the the save_device_id is OOB or failed malloc
 char *crayon_savefile_get_full_path(crayon_savefile_details_t *details, int8_t save_device_id);
+
+void DELETE_print_all_vars(crayon_savefile_data_t *savedata);
+
+void crayon_savefile_buffer_to_savedata(crayon_savefile_data_t *data, uint8_t *buffer);
+
+uint8_t crayon_savefile_set_string(crayon_savefile_details_t *details, const char *string, uint8_t string_id);
 
 //---------------Both internal and external----------------
 
@@ -221,8 +228,6 @@ crayon_savefile_set_string(details, string, CRAY_SF_STRING_SHORT_DESC);
 #define crayon_savefile_set_long_desc(details, string)  \
 crayon_savefile_set_string(details, string, CRAY_SF_STRING_LONG_DESC);
 
-uint8_t crayon_savefile_set_string(crayon_savefile_details_t *details, const char *string, uint8_t string_id);
-
 //The return value is 1 when the number of icons is greater than 3. The DC BIOS can't render icons
 	//with 4 or more frames.
 uint8_t crayon_savefile_add_icon(crayon_savefile_details_t *details, const char *image, const char *palette,
@@ -234,11 +239,6 @@ uint8_t crayon_savefile_add_eyecatcher(crayon_savefile_details_t *details, const
 //Note that if a variable still exists, for version_removed we set it to zero
 int32_t crayon_savefile_add_variable(crayon_savefile_details_t *details, void *data_ptr, uint8_t data_type, 
 	uint32_t length, crayon_savefile_version_t version_added, crayon_savefile_version_t version_removed);
-
-//Pass in the pointer to the variable node we want to delete
-// crayon_savefile_history_t *crayon_savefile_remove_variable(crayon_savefile_details_t *details,
-// 	crayon_savefile_history_t *target_node, uint8_t remove_command, crayon_savefile_history_t *transfer_var,
-// 	crayon_savefile_version_t version);
 
 //Once the history is fully constructed, we can then build our actual savefile with this fuction
 uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details);
@@ -272,5 +272,6 @@ void crayon_savefile_free_base_path();
 void crayon_savefile_free(crayon_savefile_details_t *details);	//Calling this calls the other frees
 void crayon_savefile_free_icon(crayon_savefile_details_t *details);
 void crayon_savefile_free_eyecatcher(crayon_savefile_details_t *details);
+void crayon_savefile_free_savedata(crayon_savefile_data_t *savedata);
 
 #endif

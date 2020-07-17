@@ -3,13 +3,14 @@
 //NOTE: This function contains the default values only for the current version
 //Thats why we can reference the variables directly like this
 void savefile_defaults(){
+	// if(!sf_var1){printf("Is NULL\n"); exit(1);}	//Triggers
 	sf_var1[0] = 300;
 	sf_var2[0] = 5.5;
 	sf_var3[0] = 27;
 
 	uint16_t i, j;
 	for(i = 0; i < sf_var4_length; i++){
-		sf_lol[i] = 0;
+		sf_lol[i][0] = 2;
 
 		for(j = 0; j < sf_hi_length; j++){
 			sf_hi[i][j] = -1;
@@ -18,6 +19,12 @@ void savefile_defaults(){
 		//I use strncpy instead of strcpy so we know the value
 		//of all characters in the buffer
 		strncpy(sf_name[i], "PLACEHOLDER", sf_name_length);
+	}
+
+	sf_myspace[0] = 1;
+
+	for(i = 0; i < sf_speedrun_times_length; i++){
+		sf_speedrun_times[i] = -1;
 	}
 
 	return;
@@ -30,6 +37,11 @@ void savefile_defaults(){
 //THIS IS USED BY THE CRAYON SAVEFILE DESERIALISER WHEN LOADING A SAVE FROM AN OLDER VERSION
 uint8_t update_savefile(crayon_savefile_data_t *loaded_data, crayon_savefile_data_t *latest_data,
 	crayon_savefile_version_t loaded_version, crayon_savefile_version_t latest_version){
+	
+	//Have a for loop going across all variables and if it currently exists call the default adder
+	//else handle it differently
+	//Actually, I'll need to have two for-loops. First loop for copying over the currently existing variables
+	//second for handling the old variables
 	;
 
 	return 0;
@@ -37,6 +49,8 @@ uint8_t update_savefile(crayon_savefile_data_t *loaded_data, crayon_savefile_dat
 
 uint8_t setup_savefile(crayon_savefile_details_t * details){
 	uint8_t i, error;
+
+	// sf_var1 = NULL;
 
 	#ifdef _arch_pc
 
@@ -49,7 +63,7 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 									//do the method above for all platforms
 	#endif
 
-	error = crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", sf_current_version,
+	error = crayon_savefile_init_savefile_details(details, "SAVE_DEMO3.s", SFV_CURRENT,
 		savefile_defaults, update_savefile);
 	if(error){printf("ERROR, savefile couldn't be created\n");}
 	error += crayon_savefile_set_app_id(details, "ProtoSaveDemo3");
@@ -81,18 +95,44 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 
 	#endif
 
+	//33 ids total. 3 normal vars and then 10 times 3 for the stuff that would have been in an inner struct
+
 	//Now lets construct our history
-	crayon_savefile_add_variable(details, &sf_var1, sf_var1_type, sf_var1_length, sf_initial, 0);
-	crayon_savefile_add_variable(details, &sf_var2, sf_var2_type, sf_var2_length, sf_initial, 0);
-	crayon_savefile_add_variable(details, &sf_var3, sf_var3_type, sf_var3_length, sf_initial, 0);
+	crayon_savefile_add_variable(details, &sf_var1, sf_var1_type, sf_var1_length, SFV_INITIAL, VAR_STILL_PRESENT);
+	// if(details->history->data_ptr.u16 != &sf_var1){
+	// 	printf("Its not pointing to the right place\n");
+	// }
+	// else{
+	// 	printf("It should be fine\n");
+	// }
+	crayon_savefile_add_variable(details, &sf_var2, sf_var2_type, sf_var2_length, SFV_INITIAL, VAR_STILL_PRESENT);
+	crayon_savefile_add_variable(details, &sf_var3, sf_var3_type, sf_var3_length, SFV_INITIAL, VAR_STILL_PRESENT);
 	for(i = 0; i < sf_var4_length; i++){
-		crayon_savefile_add_variable(details, &sf_lol[i], sf_lol_type, sf_lol_length, sf_initial, 0);
-		crayon_savefile_add_variable(details, &sf_hi[i], sf_hi_type, sf_hi_length, sf_initial, 0);
-		crayon_savefile_add_variable(details, &sf_name[i], sf_name_type, sf_name_length, sf_initial, 0);
+		crayon_savefile_add_variable(details, &sf_lol[i], sf_lol_type, sf_lol_length, SFV_INITIAL, VAR_STILL_PRESENT);
+		crayon_savefile_add_variable(details, &sf_hi[i], sf_hi_type, sf_hi_length, SFV_INITIAL, VAR_STILL_PRESENT);
+		crayon_savefile_add_variable(details, &sf_name[i], sf_name_type, sf_name_length, SFV_INITIAL, VAR_STILL_PRESENT);
 	}
+
+	crayon_savefile_add_variable(details, &sf_myspace, sf_myspace_type, sf_myspace_length,
+		SFV_ADDING_STUFF, VAR_STILL_PRESENT);
+	crayon_savefile_add_variable(details, &sf_speedrun_times, sf_speedrun_times_type, sf_speedrun_times_length,
+		SFV_ADDING_STUFF, VAR_STILL_PRESENT);
 
 	//Set the savefile
 	crayon_savefile_solidify(details);
+
+	// for(i = 0; i < CRAY_NUM_TYPES; i++){
+	// 	printf("Lengths %d\n", details->savedata.lengths[i]);
+	// }
+
+	// if(!sf_var1){printf("Still NULL\n");}
+
+	// if(details->history->data_ptr.u16 != &sf_var1){
+	// 	printf("Its not pointing to the right place\n");
+	// }
+	// else{
+	// 	printf("It should be fine\n");
+	// }
 
 	return 0;
 }

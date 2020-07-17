@@ -28,41 +28,58 @@ typedef struct my_savefile_var{
 	//NOTE: static const vars will have a copy in each object file. If you want to only have one copy
 		//just remove the static const and set each var's value in setup_savefile()
 
-uint16_t * sf_var1;
+//v0 VARS
+
+uint16_t *sf_var1;
 #define sf_var1_type CRAY_TYPE_UINT16
 #define sf_var1_length 1	//If you want, these length defines could be unsigned int consts.
 
-float * sf_var2;
+float *sf_var2;
 #define sf_var2_type CRAY_TYPE_FLOAT
 #define sf_var2_length 1
 
-uint8_t * sf_var3;
+uint8_t *sf_var3;
 #define sf_var3_type CRAY_TYPE_UINT8
 #define sf_var3_length 1
 
 //Now the "other_struct"
 #define sf_var4_length 10
 
-uint8_t * sf_lol[sf_var4_length];
+uint8_t *sf_lol[sf_var4_length];
 #define sf_lol_type CRAY_TYPE_UINT8
 #define sf_lol_length 1
 
-int32_t * sf_hi[sf_var4_length];
+int32_t *sf_hi[sf_var4_length];
 #define sf_hi_type CRAY_TYPE_SINT32
 #define sf_hi_length 2
 
-char * sf_name[sf_var4_length];	// "sf_var4_length" strings with 16 chars each
+char *sf_name[sf_var4_length];	// "sf_var4_length" strings with 16 chars each
 #define sf_name_type CRAY_TYPE_CHAR
 #define sf_name_length 16
+
+
+//v1 VARS
+
+uint8_t *sf_myspace;
+#define sf_myspace_type CRAY_TYPE_UINT8
+#define sf_myspace_length 1
+
+double *sf_speedrun_times;
+#define sf_speedrun_times_type CRAY_TYPE_DOUBLE
+#define sf_speedrun_times_length 2
+
 
 //For those unfamiliar with enum, a value with no assigned number is equal to the previous value plus 1
 //Also you just use the variable name like a constant, not "savefile_version.sf_initial" or something
 enum savefile_version{
-	sf_initial = 1,
+	SFV_INITIAL = 0,
+	SFV_ADDING_STUFF,
 	//Add new versions here
-	sf_latest_plus_one	//DON'T REMOVE
+	SFV_LATEST_PLUS_ONE	//DON'T REMOVE
 };
 
-static const crayon_savefile_version_t sf_current_version = sf_latest_plus_one - 1;
+#define VAR_STILL_PRESENT SFV_LATEST_PLUS_ONE
+
+static const crayon_savefile_version_t SFV_CURRENT = SFV_LATEST_PLUS_ONE - 1;
 
 #endif

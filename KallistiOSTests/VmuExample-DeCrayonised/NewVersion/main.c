@@ -9,69 +9,6 @@
 
 #define CRAYON_DEBUG 0
 
-#ifdef _arch_pc
-
-//NOTE: You should never need to access these variables directly. I'm only doing so for debugging purposes
-void print_all_vars(crayon_savefile_details_t *savefile_details){
-	printf("u8\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_UINT8]; i++){
-		printf("%d, ", savefile_details->savedata.u8[i]);
-	}
-	printf("\n");
-
-	printf("u16\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_UINT16]; i++){
-		printf("%d, ", savefile_details->savedata.u16[i]);
-	}
-	printf("\n");
-
-	printf("u32\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_UINT32]; i++){
-		printf("%d, ", savefile_details->savedata.u32[i]);
-	}
-	printf("\n");
-
-	printf("s8\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_SINT8]; i++){
-		printf("%d, ", savefile_details->savedata.s8[i]);
-	}
-	printf("\n");
-
-	printf("s16\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_SINT16]; i++){
-		printf("%d, ", savefile_details->savedata.s16[i]);
-	}
-	printf("\n");
-
-	printf("s32\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_SINT32]; i++){
-		printf("%d, ", savefile_details->savedata.s32[i]);
-	}
-	printf("\n");
-
-	printf("Float\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_FLOAT]; i++){
-		printf("%f, ", savefile_details->savedata.floats[i]);
-	}
-	printf("\n");
-
-	printf("Double\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_DOUBLE]; i++){
-		printf("%lf, ", savefile_details->savedata.doubles[i]);
-	}
-	printf("\n");
-
-	printf("Chars\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_CHAR]; i++){
-		printf("%c", savefile_details->savedata.chars[i]);
-	}
-	printf("(END)\n");
-
-	return;
-}
-
-#endif
-
 int main(){
 	#if defined(_arch_dreamcast) && CRAYON_BOOT_MODE == 1
 
@@ -177,7 +114,7 @@ int main(){
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer3, 0, 0);
 
-	print_all_vars(&savefile_details);
+	// DELETE_print_all_vars(&savefile_details.savedata);
 
 	// sf_var1[0] = 2997;
 	// sf_name[2][3] = '1';
