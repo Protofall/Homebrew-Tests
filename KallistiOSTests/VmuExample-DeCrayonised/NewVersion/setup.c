@@ -38,10 +38,9 @@ void savefile_defaults(){
 uint8_t update_savefile(crayon_savefile_data_t *loaded_data, crayon_savefile_data_t *latest_data,
 	crayon_savefile_version_t loaded_version, crayon_savefile_version_t latest_version){
 	
-	//Have a for loop going across all variables and if it currently exists call the default adder
-	//else handle it differently
-	//Actually, I'll need to have two for-loops. First loop for copying over the currently existing variables
-	//second for handling the old variables
+	//NOTE: We only need to handle vars that no longer exist
+	//We assume that the user's variable are global so thats why they don't have the latest savedata struct present
+	//We also assume the user's var IDs are globally accessable or they manually used them here as magic numbers
 	;
 
 	return 0;

@@ -20,6 +20,8 @@ typedef struct my_savefile_var{
 	float var2;
 	uint8_t var3;
 	other_struct_t var4[10];
+	uint8_t myspace;
+	double speedrun_times[2];
 } my_savefile_var_t;
 */
 

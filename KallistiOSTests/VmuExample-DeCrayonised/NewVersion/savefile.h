@@ -30,19 +30,22 @@ enum {
 	CRAY_NUM_TYPES	//This will be the number of types we have available
 };
 
-//We don't need to store the type, since the user should know which one it is
+typedef union crayon_savefile_old_variables{
+	uint8_t data_type;
+	// void *ptr; //(since the user will probably use the built-in function instead)
 	//WHY AM I USING A UNION-OF-POINTERS INSTEAD OF A VOID POINTER. Both are 8 bytes in size, right?
-typedef union crayon_savefile_variable_ptr{
-	double *type_double;
-	float *type_float;
-	uint32_t *type_u32;
-	int32_t *type_s32;
-	uint16_t *type_u16;
-	int16_t *type_s16;
-	uint8_t *type_u8;
-	int8_t *type_s8;
-	char *type_char;
-} crayon_savefile_variable_ptr_t;
+	union{
+		double *type_double;
+		float *type_float;
+		uint32_t *type_u32;
+		int32_t *type_s32;
+		uint16_t *type_u16;
+		int16_t *type_s16;
+		uint8_t *type_u8;
+		int8_t *type_s8;
+		char *type_char;
+	};
+} crayon_savefile_old_variable_t;
 
 //This is never accessed directly, but it will contain all of you variables that will get saved
 typedef struct crayon_savefile_data{
@@ -72,15 +75,15 @@ typedef struct crayon_savefile_history{
 
 	//Add some unions here for the pointer to the data and the default value
 	union{
-		uint8_t **u8;
-		uint16_t **u16;
-		uint32_t **u32;
-		int8_t **s8;
-		int16_t **s16;
-		int32_t **s32;
-		float **floats;
-		double **doubles;
-		char **chars;
+		double **type_double;
+		float **type_float;
+		uint32_t **type_u32;
+		int32_t **type_s32;
+		uint16_t **type_u16;
+		int16_t **type_s16;
+		uint8_t **type_u8;
+		int8_t **type_s8;
+		char **type_char;
 	} data_ptr;
 
 	struct crayon_savefile_history *next;
@@ -126,7 +129,7 @@ typedef struct crayon_savefile_details{
 	crayon_savefile_version_t latest_version;
 
 	crayon_savefile_data_t savedata;
-	size_t savedata_size;	//Might move this inside the data var
+	uint32_t savedata_size;	//Might move this inside the data var
 
 	unsigned char *icon_data;		//uint8_t
 	unsigned short *icon_palette;	//uint16_t
@@ -177,7 +180,7 @@ void crayon_vmu_display_icon(uint8_t vmu_bitmap, void *icon);
 
 
 uint8_t crayon_savefile_check_device_for_function(uint32_t function, int8_t save_device_id);	//0 if device is valid
-uint16_t crayon_savefile_bytes_to_blocks(size_t bytes);	//Takes a byte count and returns no. blocks needed to save it
+uint16_t crayon_savefile_bytes_to_blocks(uint32_t bytes);	//Takes a byte count and returns no. blocks needed to save it
 int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t *details);	//Returns the number of blocks your save file will need (Uncompressed)
 
 uint16_t crayon_savefile_detail_string_length(uint8_t string_id);
@@ -209,7 +212,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 //------------------Called externally----------------------
 
 
-uint8_t crayon_savefile_set_path(char * path);	//On Dreamcast this is always "/vmu/" and it will ignore the param
+uint8_t crayon_savefile_set_path(char *path);	//On Dreamcast this is always "/vmu/" and it will ignore the param
 
 //Make sure to call this on a new savefile details struct otherwise you can get strange results if
 	//you use it without this. The last two parameters are function pointers to user defined default
