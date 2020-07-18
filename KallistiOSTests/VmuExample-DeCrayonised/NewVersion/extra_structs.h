@@ -73,7 +73,7 @@ double *sf_speedrun_times;
 //Also you just use the variable name like a constant, not "savefile_version.sf_initial" or something
 enum savefile_version{
 	SFV_INITIAL = 0,
-	SFV_ADDING_STUFF,
+	SFV_SPEEDRUNNER,
 	//Add new versions here
 	SFV_LATEST_PLUS_ONE	//DON'T REMOVE
 };

@@ -95,16 +95,8 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 
 	#endif
 
-	//33 ids total. 3 normal vars and then 10 times 3 for the stuff that would have been in an inner struct
-
 	//Now lets construct our history
 	crayon_savefile_add_variable(details, &sf_var1, sf_var1_type, sf_var1_length, SFV_INITIAL, VAR_STILL_PRESENT);
-	// if(details->history->data_ptr.u16 != &sf_var1){
-	// 	printf("Its not pointing to the right place\n");
-	// }
-	// else{
-	// 	printf("It should be fine\n");
-	// }
 	crayon_savefile_add_variable(details, &sf_var2, sf_var2_type, sf_var2_length, SFV_INITIAL, VAR_STILL_PRESENT);
 	crayon_savefile_add_variable(details, &sf_var3, sf_var3_type, sf_var3_length, SFV_INITIAL, VAR_STILL_PRESENT);
 	for(i = 0; i < sf_var4_length; i++){
@@ -114,9 +106,9 @@ uint8_t setup_savefile(crayon_savefile_details_t * details){
 	}
 
 	crayon_savefile_add_variable(details, &sf_myspace, sf_myspace_type, sf_myspace_length,
-		SFV_ADDING_STUFF, VAR_STILL_PRESENT);
+		SFV_SPEEDRUNNER, VAR_STILL_PRESENT);
 	crayon_savefile_add_variable(details, &sf_speedrun_times, sf_speedrun_times_type, sf_speedrun_times_length,
-		SFV_ADDING_STUFF, VAR_STILL_PRESENT);
+		SFV_SPEEDRUNNER, VAR_STILL_PRESENT);
 
 	//Set the savefile
 	crayon_savefile_solidify(details);
