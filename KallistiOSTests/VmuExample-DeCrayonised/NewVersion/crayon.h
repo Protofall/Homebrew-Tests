@@ -16,21 +16,17 @@
 #include <string.h>
 #include <stdint.h> //For the uintX_t types
 
-//Only used for slot/port in dreamcast. x is port, y is slot
-typedef struct vec2_s8{
-	int8_t x, y;
-} vec2_s8_t;
-
 //Checks if the computer running this code is big endian or not
 extern uint8_t crayon_misc_is_big_endian();
 
-extern void crayon_misc_correct_endian(uint8_t * buffer, size_t bytes);	//WIP
+extern void crayon_misc_correct_endian(uint8_t *buffer, size_t bytes);	//WIP
 
 extern void crayon_misc_encode_to_buffer(uint8_t *buffer, uint8_t *data, size_t bytes);
 
 #define CRAYON_BOOT_MODE 0	//Load assets from cd dir instead of sd
 
-#ifdef _arch_dreamcast
+#if defined(_arch_dreamcast)
+
 #include <kos/fs_romdisk.h> //For romdisk swapping
 
 #if CRAYON_BOOT_MODE == 1
@@ -45,6 +41,13 @@ void unmount_ext2_sd();
 int mount_ext2_sd();
 
 #endif
+
+//Only used for port/slot in dreamcast. x is port, y is slot
+typedef struct vec2_s8{
+	int8_t x, y;
+} vec2_s8_t;
+
+vec2_s8_t crayon_savefile_dreamcast_get_port_and_slot(int8_t savefile_device_id);
 
 uint8_t crayon_memory_mount_romdisk(char *filename, char *mountpoint);
 

@@ -9,69 +9,6 @@
 
 #define CRAYON_DEBUG 0
 
-#ifdef _arch_pc
-
-//NOTE: You should never need to access these variables directly. I'm only doing so for debugging purposes
-void print_all_vars(crayon_savefile_details_t *savefile_details){
-	printf("u8\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_UINT8]; i++){
-		printf("%d, ", savefile_details->savedata.u8[i]);
-	}
-	printf("\n");
-
-	printf("u16\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_UINT16]; i++){
-		printf("%d, ", savefile_details->savedata.u16[i]);
-	}
-	printf("\n");
-
-	printf("u32\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_UINT32]; i++){
-		printf("%d, ", savefile_details->savedata.u32[i]);
-	}
-	printf("\n");
-
-	printf("s8\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_SINT8]; i++){
-		printf("%d, ", savefile_details->savedata.s8[i]);
-	}
-	printf("\n");
-
-	printf("s16\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_SINT16]; i++){
-		printf("%d, ", savefile_details->savedata.s16[i]);
-	}
-	printf("\n");
-
-	printf("s32\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_SINT32]; i++){
-		printf("%d, ", savefile_details->savedata.s32[i]);
-	}
-	printf("\n");
-
-	printf("Float\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_FLOAT]; i++){
-		printf("%f, ", savefile_details->savedata.floats[i]);
-	}
-	printf("\n");
-
-	printf("Double\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_DOUBLE]; i++){
-		printf("%lf, ", savefile_details->savedata.doubles[i]);
-	}
-	printf("\n");
-
-	printf("Chars\n");
-	for(int i = 0; i < savefile_details->savedata.lengths[CRAY_TYPE_CHAR]; i++){
-		printf("%c", savefile_details->savedata.chars[i]);
-	}
-	printf("(END)\n");
-
-	return;
-}
-
-#endif
-
 int main(){
 	#if defined(_arch_dreamcast) && CRAYON_BOOT_MODE == 1
 
@@ -97,14 +34,14 @@ int main(){
 	uint8_t load_error = crayon_savefile_load_savedata(&savefile_details);	//If a savefile DNE this fails
 
 	//Change vars here
-	sf_var1[0] = 2997;
-	sf_var2[0] += 5.25;
-	sf_name[2][3] = '1';
+	// sf_var1[0] = 2997;
+	// sf_var2[0] += 5.25;
+	// sf_name[2][3] = '1';
 
 	uint8_t save_error = 1;
-	if(savefile_details.valid_devices){
+	if(savefile_details.present_devices){
 		save_error = crayon_savefile_save_savedata(&savefile_details);
-		crayon_savefile_update_valid_saves(&savefile_details, CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT);	//Updating the save
+		// crayon_savefile_update_valid_saves(&savefile_details, CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT);	//Updating the save
 	}
 
 	#if defined(_arch_dreamcast) && CRAYON_BOOT_MODE == 1
@@ -163,7 +100,7 @@ int main(){
 
 	char buffer[70];
 	if(!setup_res){
-		sprintf(buffer, "Save initialised\nUses %ld bytes", CRAY_SF_HDR_SIZE + savefile_details.save_size);
+		sprintf(buffer, "Save initialised\nUses %d bytes", CRAY_SF_HDR_SIZE + savefile_details.savedata_size);
 	}
 	else{
 		sprintf(buffer, "It failed with code %d", setup_res);
@@ -172,12 +109,13 @@ int main(){
 	char buffer2[32];
 	char buffer3[32];
 	sprintf(buffer2, "save_error: %d. load_error %d\n", save_error, load_error);
-	sprintf(buffer3, "bitmaps: %d. %d\n", savefile_details.valid_devices, savefile_details.valid_saves);
+	sprintf(buffer3, "bitmaps: %d. %d .%d\n", savefile_details.present_devices,
+		savefile_details.present_savefiles, savefile_details.current_savefiles);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer3, 0, 0);
 
-	print_all_vars(&savefile_details);
+	// __crayon_savefile_print_savedata(&savefile_details.savedata);
 
 	// sf_var1[0] = 2997;
 	// sf_name[2][3] = '1';
