@@ -4,6 +4,8 @@
 char *__savefile_path = NULL;
 uint16_t __savefile_path_length;
 
+#if defined(_arch_dreamcast)
+
 vec2_s8_t crayon_savefile_dreamcast_get_port_and_slot(int8_t save_device_id){
 	vec2_s8_t values = {-1,-1};
 	if(save_device_id < 0 || save_device_id >= 8){return values;}
@@ -19,6 +21,8 @@ vec2_s8_t crayon_savefile_dreamcast_get_port_and_slot(int8_t save_device_id){
 
 	return values;
 }
+
+#endif
 
 //Why is valid screens a part of Savefile details, but this function isn't?
 void crayon_vmu_display_icon(uint8_t vmu_bitmap, void *icon){
@@ -86,7 +90,10 @@ uint16_t crayon_savefile_bytes_to_blocks(uint32_t bytes){
 int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t *details){
 	#ifdef _arch_dreamcast
 
-	uint16_t eyecatcher_size  = 0;
+	// uint16_t eyecatcher_size = vmu_eyecatch_size();
+	// if(eyecatcher_size < 0){return -1;}
+
+	uint16_t eyecatcher_size = 0;
 	switch(details->eyecatcher_type){
 		case VMUPKG_EC_NONE:
 			eyecatcher_size = 0; break;
@@ -125,25 +132,26 @@ uint16_t crayon_savefile_detail_string_length(uint8_t string_id){
 		
 			#endif
 		case CRAY_SF_STRING_APP_ID:
+			return 16;
+
+		#if defined(_arch_dreamcast)
+		
 		case CRAY_SF_STRING_SHORT_DESC:
 			return 16;
 		case CRAY_SF_STRING_LONG_DESC:
 			return 32;
+		
+		#endif
+
 		default:
 			return 0;
 	}
 }
 
 void crayon_savefile_serialise(crayon_savefile_details_t *details, uint8_t *buffer){
-
-	//DELETE THIS LATER
-	// memset(buffer, 0, details->savedata_size);
-	// return;
-
-
 	crayon_savefile_data_t data = details->savedata;
 
-	uint8_t *buffer_old = buffer;
+	// uint8_t *buffer_old = buffer;
 
 	//Encode the version number
 	crayon_misc_encode_to_buffer(buffer, (uint8_t*)&details->latest_version, sizeof(crayon_savefile_version_t));
@@ -179,16 +187,14 @@ void crayon_savefile_serialise(crayon_savefile_details_t *details, uint8_t *buff
 	crayon_misc_encode_to_buffer(buffer, (uint8_t*)data.chars, sizeof(char) * data.lengths[CRAY_TYPE_CHAR]);
 	buffer += (sizeof(char) * data.lengths[CRAY_TYPE_CHAR]);
 
-	printf("Size %d. Size we should have %d\n", (int)(buffer - buffer_old), details->savedata_size);
-
-	buffer = buffer_old;
+	// printf("Size %d. Size we should have %d\n", (int)(buffer - buffer_old), details->savedata_size);
 
 	return;
 }
 
 //Assume the buffer has the correct endian-ness going into this
 	//WARNING. Data_length currently unchecked.
-uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *buffer, uint32_t data_length){
+uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *buffer){
 	//Same as serialiser, but instead we extract the variables and version from the buffer
 	crayon_savefile_data_t *data = &details->savedata;
 
@@ -235,10 +241,6 @@ uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t 
 		old_savedata.s8 = malloc(sizeof(int8_t) * old_savedata.lengths[CRAY_TYPE_SINT8]);
 		old_savedata.chars = malloc(sizeof(char) * old_savedata.lengths[CRAY_TYPE_CHAR]);
 
-		// printf("Vars before union %d\n", details->num_vars);
-		// union crayon_savefile_variable_ptr *array = malloc(sizeof(union crayon_savefile_variable_ptr) *
-		// 	details->num_vars);
-
 		crayon_savefile_old_variable_t *array = malloc(sizeof(crayon_savefile_old_variable_t) *
 			details->num_vars);
 
@@ -267,57 +269,57 @@ uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t 
 			if(loaded_version >= curr->version_added && loaded_version < curr->version_removed){
 				switch(curr->data_type){
 					case CRAY_TYPE_DOUBLE:
-						array[index].type_double = old_savedata.doubles + pointers[curr->data_type];
+						array[index].t_double = old_savedata.doubles + pointers[curr->data_type];
 						for(i = 0; i < curr->data_length; i++){
-							(*curr->data_ptr.type_double)[i] = array[index].type_double[i];
+							(*curr->data_ptr.t_double)[i] = array[index].t_double[i];
 						}
 						break;
 					case CRAY_TYPE_FLOAT:
-						array[index].type_float = old_savedata.floats + pointers[curr->data_type];
+						array[index].t_float = old_savedata.floats + pointers[curr->data_type];
 						for(i = 0; i < curr->data_length; i++){
-							(*curr->data_ptr.type_float)[i] = array[index].type_float[i];
+							(*curr->data_ptr.t_float)[i] = array[index].t_float[i];
 						}
 						break;
 					case CRAY_TYPE_UINT32:
-						array[index].type_u32 = old_savedata.u32 + pointers[curr->data_type];
+						array[index].t_u32 = old_savedata.u32 + pointers[curr->data_type];
 						for(i = 0; i < curr->data_length; i++){
-							(*curr->data_ptr.type_u32)[i] = array[index].type_u32[i];
+							(*curr->data_ptr.t_u32)[i] = array[index].t_u32[i];
 						}
 						break;
 					case CRAY_TYPE_SINT32:
-						array[index].type_s32 = old_savedata.s32 + pointers[curr->data_type];
+						array[index].t_s32 = old_savedata.s32 + pointers[curr->data_type];
 						for(i = 0; i < curr->data_length; i++){
-							(*curr->data_ptr.type_s32)[i] = array[index].type_s32[i];
+							(*curr->data_ptr.t_s32)[i] = array[index].t_s32[i];
 						}
 						break;
 					case CRAY_TYPE_UINT16:
-						array[index].type_u16 = old_savedata.u16 + pointers[curr->data_type];
+						array[index].t_u16 = old_savedata.u16 + pointers[curr->data_type];
 						for(i = 0; i < curr->data_length; i++){
-							(*curr->data_ptr.type_u16)[i] = array[index].type_u16[i];
+							(*curr->data_ptr.t_u16)[i] = array[index].t_u16[i];
 						}
 						break;
 					case CRAY_TYPE_SINT16:
-						array[index].type_s16 = old_savedata.s16 + pointers[curr->data_type];
+						array[index].t_s16 = old_savedata.s16 + pointers[curr->data_type];
 						for(i = 0; i < curr->data_length; i++){
-							(*curr->data_ptr.type_s16)[i] = array[index].type_s16[i];
+							(*curr->data_ptr.t_s16)[i] = array[index].t_s16[i];
 						}
 						break;
 					case CRAY_TYPE_UINT8:
-						array[index].type_u8 = old_savedata.u8 + pointers[curr->data_type];
+						array[index].t_u8 = old_savedata.u8 + pointers[curr->data_type];
 						for(i = 0; i < curr->data_length; i++){
-							(*curr->data_ptr.type_u8)[i] = array[index].type_u8[i];
+							(*curr->data_ptr.t_u8)[i] = array[index].t_u8[i];
 						}
 						break;
 					case CRAY_TYPE_SINT8:
-						array[index].type_s8 = old_savedata.s8 + pointers[curr->data_type];
+						array[index].t_s8 = old_savedata.s8 + pointers[curr->data_type];
 						for(i = 0; i < curr->data_length; i++){
-							(*curr->data_ptr.type_s8)[i] = array[index].type_s8[i];
+							(*curr->data_ptr.t_s8)[i] = array[index].t_s8[i];
 						}
 						break;
 					case CRAY_TYPE_CHAR:
-						array[index].type_char = old_savedata.chars + pointers[curr->data_type];
+						array[index].t_char = old_savedata.chars + pointers[curr->data_type];
 						for(i = 0; i < curr->data_length; i++){
-							(*curr->data_ptr.type_char)[i] = array[index].type_char[i];
+							(*curr->data_ptr.t_char)[i] = array[index].t_char[i];
 						}
 						break;
 				}
@@ -335,10 +337,10 @@ uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t 
 		}
 
 		//Call the user function to handle old to new savedata transfers
-		;
+		(*details->update_savefile_func)(array, loaded_version, details->latest_version);
 
 		printf("OLD v%d\n", loaded_version);
-		DELETE_print_all_vars(&old_savedata);
+		__crayon_savefile_print_savedata(&old_savedata);
 		printf("\n");
 
 		//Free the union array
@@ -352,7 +354,7 @@ uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t 
 	}
 
 	printf("NEW v%d\n", details->latest_version);
-	DELETE_print_all_vars(data);
+	__crayon_savefile_print_savedata(data);
 	printf("\n");
 
 	return 0;
@@ -421,67 +423,72 @@ char *crayon_savefile_get_full_path(crayon_savefile_details_t *details, int8_t s
 }
 
 //NOTE: You should never need to access these variables directly. I'm only doing so for debugging purposes
-void DELETE_print_all_vars(crayon_savefile_data_t *savedata){
+void __crayon_savefile_print_savedata(crayon_savefile_data_t *savedata){
+	#if defined(_arch_pc)
+
+	uint32_t i;
 	printf("(START)\n\n");
 
-	for(int i = 0; i < CRAY_NUM_TYPES; i++){
+	for(i = 0; i < CRAY_NUM_TYPES; i++){
 		printf("%d, ", savedata->lengths[i]);
 	}
 	printf("\n");
 
-	printf("u8\n");
-	for(int i = 0; i < savedata->lengths[CRAY_TYPE_UINT8]; i++){
-		printf("%d, ", savedata->u8[i]);
-	}
-	printf("\n");
-
-	printf("u16\n");
-	for(int i = 0; i < savedata->lengths[CRAY_TYPE_UINT16]; i++){
-		printf("%d, ", savedata->u16[i]);
-	}
-	printf("\n");
-
-	printf("u32\n");
-	for(int i = 0; i < savedata->lengths[CRAY_TYPE_UINT32]; i++){
-		printf("%d, ", savedata->u32[i]);
-	}
-	printf("\n");
-
-	printf("s8\n");
-	for(int i = 0; i < savedata->lengths[CRAY_TYPE_SINT8]; i++){
-		printf("%d, ", savedata->s8[i]);
-	}
-	printf("\n");
-
-	printf("s16\n");
-	for(int i = 0; i < savedata->lengths[CRAY_TYPE_SINT16]; i++){
-		printf("%d, ", savedata->s16[i]);
-	}
-	printf("\n");
-
-	printf("s32\n");
-	for(int i = 0; i < savedata->lengths[CRAY_TYPE_SINT32]; i++){
-		printf("%d, ", savedata->s32[i]);
-	}
-	printf("\n");
-
-	printf("Float\n");
-	for(int i = 0; i < savedata->lengths[CRAY_TYPE_FLOAT]; i++){
-		printf("%f, ", savedata->floats[i]);
-	}
-	printf("\n");
-
 	printf("Double\n");
-	for(int i = 0; i < savedata->lengths[CRAY_TYPE_DOUBLE]; i++){
+	for(i = 0; i < savedata->lengths[CRAY_TYPE_DOUBLE]; i++){
 		printf("%lf, ", savedata->doubles[i]);
 	}
 	printf("\n");
 
+	printf("Float\n");
+	for(i = 0; i < savedata->lengths[CRAY_TYPE_FLOAT]; i++){
+		printf("%f, ", savedata->floats[i]);
+	}
+	printf("\n");
+
+	printf("u32\n");
+	for(i = 0; i < savedata->lengths[CRAY_TYPE_UINT32]; i++){
+		printf("%d, ", savedata->u32[i]);
+	}
+	printf("\n");
+
+	printf("s32\n");
+	for(i = 0; i < savedata->lengths[CRAY_TYPE_SINT32]; i++){
+		printf("%d, ", savedata->s32[i]);
+	}
+	printf("\n");
+
+	printf("u16\n");
+	for(i = 0; i < savedata->lengths[CRAY_TYPE_UINT16]; i++){
+		printf("%d, ", savedata->u16[i]);
+	}
+	printf("\n");
+
+	printf("s16\n");
+	for(i = 0; i < savedata->lengths[CRAY_TYPE_SINT16]; i++){
+		printf("%d, ", savedata->s16[i]);
+	}
+	printf("\n");
+
+	printf("u8\n");
+	for(i = 0; i < savedata->lengths[CRAY_TYPE_UINT8]; i++){
+		printf("%d, ", savedata->u8[i]);
+	}
+	printf("\n");
+
+	printf("s8\n");
+	for(i = 0; i < savedata->lengths[CRAY_TYPE_SINT8]; i++){
+		printf("%d, ", savedata->s8[i]);
+	}
+	printf("\n");
+
 	printf("Chars\n");
-	for(int i = 0; i < savedata->lengths[CRAY_TYPE_CHAR]; i++){
+	for(i = 0; i < savedata->lengths[CRAY_TYPE_CHAR]; i++){
 		printf("%c", savedata->chars[i]);
 	}
 	printf("\n(END)\n");
+
+	#endif
 
 	return;
 }
@@ -569,7 +576,10 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	fclose(fp);
 
 	vmu_pkg_t pkg;
-	vmu_pkg_parse(pkg_out, &pkg);
+	if(vmu_pkg_parse(pkg_out, &pkg)){
+		//CRC is incorrect
+		;
+	}
 
 	free(pkg_out);
 
@@ -667,8 +677,8 @@ uint8_t crayon_savefile_set_path(char *path){
 //Make sure to call this first (And call the save icon and eyecatcher functions after since this overides them)
 uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details, const char *save_name,
 	crayon_savefile_version_t latest_version, void (*default_values_func)(),
-	uint8_t (*update_savefile_func)(crayon_savefile_data_t*, crayon_savefile_data_t*,
-	crayon_savefile_version_t, crayon_savefile_version_t)){
+	uint8_t (*update_savefile_func)(crayon_savefile_old_variable_t*, crayon_savefile_version_t,
+	crayon_savefile_version_t)){
 
 	uint16_t save_name_length = strlen(save_name);
 
@@ -695,19 +705,14 @@ uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details
 
 	details->savedata_size = 0;	//For now
 
+	#ifdef _arch_dreamcast
+
 	details->icon_data = NULL;
 	details->icon_palette = NULL;
 	details->icon_anim_count = 0;
 
 	details->eyecatcher_data = NULL;
-
-	#ifdef _arch_dreamcast
-	
 	details->eyecatcher_type = VMUPKG_EC_NONE;	//The default
-	
-	#else
-	
-	details->eyecatcher_type = 0;
 	
 	#endif
 
@@ -758,6 +763,8 @@ uint8_t crayon_savefile_init_savefile_details(crayon_savefile_details_t *details
 
 uint8_t crayon_savefile_add_icon(crayon_savefile_details_t *details, const char *image, const char *palette,
 	uint8_t icon_anim_count, uint16_t icon_anim_speed){
+	#ifdef _arch_dreamcast
+
 	FILE *icon_data_file;
 	int size_data;
 
@@ -806,6 +813,8 @@ uint8_t crayon_savefile_add_icon(crayon_savefile_details_t *details, const char 
 
 	details->icon_anim_count = icon_anim_count;
 	details->icon_anim_speed = icon_anim_speed;
+
+	#endif
 
 	return 0;
 }
@@ -893,35 +902,60 @@ int32_t crayon_savefile_add_variable(crayon_savefile_details_t *details, void *d
 	//Store a pointer to the type and the default value
 	switch(var->data_type){
 		case CRAY_TYPE_DOUBLE:
-			var->data_ptr.type_double = (double**)data_ptr;
+			var->data_ptr.t_double = (double**)data_ptr;
 			break;
 		case CRAY_TYPE_FLOAT:
-			var->data_ptr.type_float = (float**)data_ptr;
+			var->data_ptr.t_float = (float**)data_ptr;
 			break;
 		case CRAY_TYPE_UINT32:
-			var->data_ptr.type_u32 = (uint32_t**)data_ptr;
+			var->data_ptr.t_u32 = (uint32_t**)data_ptr;
 			break;
 		case CRAY_TYPE_SINT32:
-			var->data_ptr.type_s32 = (int32_t**)data_ptr;
+			var->data_ptr.t_s32 = (int32_t**)data_ptr;
 			break;
 		case CRAY_TYPE_UINT16:
-			var->data_ptr.type_u16 = (uint16_t**)data_ptr;
+			var->data_ptr.t_u16 = (uint16_t**)data_ptr;
 			break;
 		case CRAY_TYPE_SINT16:
-			var->data_ptr.type_s16 = (int16_t**)data_ptr;
+			var->data_ptr.t_s16 = (int16_t**)data_ptr;
 			break;
 		case CRAY_TYPE_UINT8:
-			var->data_ptr.type_u8 = (uint8_t**)data_ptr;
+			var->data_ptr.t_u8 = (uint8_t**)data_ptr;
 			break;
 		case CRAY_TYPE_SINT8:
-			var->data_ptr.type_s8 = (int8_t**)data_ptr;
+			var->data_ptr.t_s8 = (int8_t**)data_ptr;
 			break;
 		case CRAY_TYPE_CHAR:
-			var->data_ptr.type_char = (char**)data_ptr;
+			var->data_ptr.t_char = (char**)data_ptr;
 			break;
 	}
 
 	return details->num_vars++;
+}
+
+void *crayon_savefile_get_variable_ptr(crayon_savefile_old_variable_t *array, uint32_t index){
+	switch(array[index].data_type){
+		case CRAY_TYPE_DOUBLE:
+			return array[index].t_double;
+		case CRAY_TYPE_FLOAT:
+			return array[index].t_float;
+		case CRAY_TYPE_UINT32:
+			return array[index].t_u32;
+		case CRAY_TYPE_SINT32:
+			return array[index].t_s32;
+		case CRAY_TYPE_UINT16:
+			return array[index].t_u16;
+		case CRAY_TYPE_SINT16:
+			return array[index].t_s16;
+		case CRAY_TYPE_UINT8:
+			return array[index].t_u8;
+		case CRAY_TYPE_SINT8:
+			return array[index].t_s8;
+		case CRAY_TYPE_CHAR:
+			return array[index].t_char;
+		default:
+			return NULL;
+	}
 }
 
 uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
@@ -979,31 +1013,31 @@ uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details){
 		if(var->version_removed > details->latest_version){	//We only give space to vars that still exist
 			switch(var->data_type){
 				case CRAY_TYPE_DOUBLE:
-					*var->data_ptr.type_double = &details->savedata.doubles[indexes[var->data_type]];
+					*var->data_ptr.t_double = &details->savedata.doubles[indexes[var->data_type]];
 					break;
 				case CRAY_TYPE_FLOAT:
-					*var->data_ptr.type_float = &details->savedata.floats[indexes[var->data_type]];
+					*var->data_ptr.t_float = &details->savedata.floats[indexes[var->data_type]];
 					break;
 				case CRAY_TYPE_UINT32:
-					*var->data_ptr.type_u32 = &details->savedata.u32[indexes[var->data_type]];
+					*var->data_ptr.t_u32 = &details->savedata.u32[indexes[var->data_type]];
 					break;
 				case CRAY_TYPE_SINT32:
-					*var->data_ptr.type_s32 = &details->savedata.s32[indexes[var->data_type]];
+					*var->data_ptr.t_s32 = &details->savedata.s32[indexes[var->data_type]];
 					break;
 				case CRAY_TYPE_UINT16:
-					*var->data_ptr.type_u16 = &details->savedata.u16[indexes[var->data_type]];
+					*var->data_ptr.t_u16 = &details->savedata.u16[indexes[var->data_type]];
 					break;
 				case CRAY_TYPE_SINT16:
-					*var->data_ptr.type_s16 = &details->savedata.s16[indexes[var->data_type]];
+					*var->data_ptr.t_s16 = &details->savedata.s16[indexes[var->data_type]];
 					break;
 				case CRAY_TYPE_UINT8:
-					*var->data_ptr.type_u8 = &details->savedata.u8[indexes[var->data_type]];
+					*var->data_ptr.t_u8 = &details->savedata.u8[indexes[var->data_type]];
 					break;
 				case CRAY_TYPE_SINT8:
-					*var->data_ptr.type_s8 = &details->savedata.s8[indexes[var->data_type]];
+					*var->data_ptr.t_s8 = &details->savedata.s8[indexes[var->data_type]];
 					break;
 				case CRAY_TYPE_CHAR:
-					*var->data_ptr.type_char = &details->savedata.chars[indexes[var->data_type]];
+					*var->data_ptr.t_char = &details->savedata.chars[indexes[var->data_type]];
 				break;
 			}
 			indexes[var->data_type] += var->data_length;
@@ -1151,25 +1185,33 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	#if defined(_arch_dreamcast)
 
 	vmu_pkg_t pkg;
-	vmu_pkg_parse(data, &pkg);
+	if(vmu_pkg_parse(data, &pkg)){
+		//CRC is incorrect
+		;
+	}
+
+	//Check to see if pkg.data_len is actually correct or not
 
 	//Read the pkg data into my struct
-	uint8_t deserialise_result = crayon_savefile_deserialise(details, (uint8_t *)pkg.data,
-		(uint32_t)pkg.data_len);
+	uint8_t deserialise_result = crayon_savefile_deserialise(details, (uint8_t *)pkg.data);
 
 	#else
+
+	//Call the endian function on "data"
+	;
 
 	//Obtain the data length
 	crayon_savefile_hdr_t hdr;
 
 	crayon_misc_encode_to_buffer((uint8_t*)&hdr.app_id, data, 16);
-	crayon_misc_encode_to_buffer((uint8_t*)&hdr.short_desc, data + 16, 16);
-	crayon_misc_encode_to_buffer((uint8_t*)&hdr.long_desc, data + 32, 32);
-	crayon_misc_encode_to_buffer((uint8_t*)&hdr.data_size, data + 64, 4);
+	crayon_misc_encode_to_buffer((uint8_t*)&hdr.data_size, data + 16, 4);
+	// crayon_misc_encode_to_buffer((uint8_t*)&hdr.short_desc, data + 16, 16);
+	// crayon_misc_encode_to_buffer((uint8_t*)&hdr.long_desc, data + 32, 32);
+	// crayon_misc_encode_to_buffer((uint8_t*)&hdr.data_size, data + 64, 4);
 
 	//Either it has the wrong size or the app ids somehow don't match
 	//(The later should never trigger if you use this library right)
-	if(hdr.data_size != pkg_size - CRAY_SF_HDR_SIZE || strcmp(hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
+	if(CRAY_SF_HDR_SIZE + hdr.data_size != pkg_size || strcmp(hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
 		free(data);
 		printf("%d, %ld\n", hdr.data_size, pkg_size - CRAY_SF_HDR_SIZE);
 		printf("%s %s\n", hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID]);
@@ -1179,8 +1221,7 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 
 	//Read the pkg data into my struct
 	//We add CRAY_SF_HDR_SIZE to skip the header
-	uint8_t deserialise_result = crayon_savefile_deserialise(details, data + CRAY_SF_HDR_SIZE,
-		hdr.data_size);
+	uint8_t deserialise_result = crayon_savefile_deserialise(details, data + CRAY_SF_HDR_SIZE);
 
 	#endif
 
@@ -1230,9 +1271,7 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 	memcpy(pkg.icon_pal, details->icon_palette, 32);
 	pkg.icon_data = details->icon_data;
 	pkg.eyecatch_type = details->eyecatcher_type;
-	if(pkg.eyecatch_type){
-		pkg.eyecatch_data = details->eyecatcher_data;
-	}
+	pkg.eyecatch_data = details->eyecatcher_data;	//If the type is zero, this will be NULL anyways
 	pkg.data_len = length;
 	pkg.data = data;
 
@@ -1366,17 +1405,25 @@ void crayon_savefile_free(crayon_savefile_details_t *details){
 }
 
 void crayon_savefile_free_icon(crayon_savefile_details_t *details){
+	#ifdef _arch_dreamcast
+
 	if(details->icon_data){free(details->icon_data);}
 	if(details->icon_palette){free(details->icon_palette);}
 	details->icon_anim_count = 0;
 	details->icon_anim_speed = 0;
 
+	#endif
+
 	return;
 }
 
 void crayon_savefile_free_eyecatcher(crayon_savefile_details_t *details){
+	#ifdef _arch_dreamcast
+
 	if(details->eyecatcher_data){free(details->eyecatcher_data);}
 	details->eyecatcher_type = 0;
+
+	#endif
 
 	return;
 }

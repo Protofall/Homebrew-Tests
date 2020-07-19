@@ -114,7 +114,7 @@ int main(){
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer3, 0, 0);
 
-	// DELETE_print_all_vars(&savefile_details.savedata);
+	// __crayon_savefile_print_savedata(&savefile_details.savedata);
 
 	// sf_var1[0] = 2997;
 	// sf_name[2][3] = '1';

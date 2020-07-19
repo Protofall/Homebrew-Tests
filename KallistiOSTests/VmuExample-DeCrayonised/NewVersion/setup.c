@@ -33,15 +33,18 @@ void savefile_defaults(){
 //In this function, we don't handle the variables directly like normal, since some of
 //them don't exist anymore. So instead we refer to them by their history IDs like so
 
-//Need a function to get var "x" from the crayon_savefile_data_t
 //THIS IS USED BY THE CRAYON SAVEFILE DESERIALISER WHEN LOADING A SAVE FROM AN OLDER VERSION
-uint8_t update_savefile(crayon_savefile_data_t *loaded_data, crayon_savefile_data_t *latest_data,
+//THERE IS NO NEED TO CALL THIS MANUALLY
+uint8_t update_savefile(crayon_savefile_old_variable_t *loaded_savedata,
 	crayon_savefile_version_t loaded_version, crayon_savefile_version_t latest_version){
 	
 	//NOTE: We only need to handle vars that no longer exist
 	//We assume that the user's variable are global so thats why they don't have the latest savedata struct present
 	//We also assume the user's var IDs are globally accessable or they manually used them here as magic numbers
 	;
+
+	//Use "crayon_savefile_get_variable_ptr(crayon_savefile_old_variable_t *array, uint32_t index)"
+	//to get the right pointer
 
 	return 0;
 }
