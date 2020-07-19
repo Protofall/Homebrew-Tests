@@ -100,7 +100,7 @@ int main(){
 
 	char buffer[70];
 	if(!setup_res){
-		sprintf(buffer, "Save initialised\nUses %ld bytes", CRAY_SF_HDR_SIZE + savefile_details.savedata_size);
+		sprintf(buffer, "Save initialised\nUses %d bytes", CRAY_SF_HDR_SIZE + savefile_details.savedata_size);
 	}
 	else{
 		sprintf(buffer, "It failed with code %d", setup_res);

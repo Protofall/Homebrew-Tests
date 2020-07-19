@@ -4,26 +4,6 @@
 char *__savefile_path = NULL;
 uint16_t __savefile_path_length;
 
-#if defined(_arch_dreamcast)
-
-vec2_s8_t crayon_savefile_dreamcast_get_port_and_slot(int8_t save_device_id){
-	vec2_s8_t values = {-1,-1};
-	if(save_device_id < 0 || save_device_id >= 8){return values;}
-	
-	if(save_device_id % 2 == 0){
-		values.y = 1;
-	}
-	else{
-		values.y = 2;
-	}
-
-	values.x = save_device_id / 2;
-
-	return values;
-}
-
-#endif
-
 //Why is valid screens a part of Savefile details, but this function isn't?
 void crayon_vmu_display_icon(uint8_t vmu_bitmap, void *icon){
 	#ifdef _arch_dreamcast
@@ -194,17 +174,19 @@ void crayon_savefile_serialise(crayon_savefile_details_t *details, uint8_t *buff
 
 //Assume the buffer has the correct endian-ness going into this
 	//WARNING. Data_length currently unchecked.
-uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *buffer){
+uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *data, uint32_t data_length){
 	//Same as serialiser, but instead we extract the variables and version from the buffer
-	crayon_savefile_data_t *data = &details->savedata;
+	crayon_savefile_data_t *new_savedata = &details->savedata;
 
 	//Decode the version number
 	crayon_savefile_version_t loaded_version;
-	crayon_misc_encode_to_buffer((uint8_t*)&loaded_version, buffer, sizeof(crayon_savefile_version_t));
-	buffer += sizeof(crayon_savefile_version_t);
+	crayon_misc_encode_to_buffer((uint8_t*)&loaded_version, data, sizeof(crayon_savefile_version_t));
+	data += sizeof(crayon_savefile_version_t);
+	data_length -= sizeof(crayon_savefile_version_t);
 
 	//We'll also need to check if the version number is valid
 	if(loaded_version > details->latest_version){
+		printf("TEST\n");
 		return 1;
 	}
 
@@ -228,6 +210,22 @@ uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t 
 			}
 
 			curr = curr->next;
+		}
+
+		uint32_t expected_size = (old_savedata.lengths[CRAY_TYPE_DOUBLE] * sizeof(double)) +
+			(old_savedata.lengths[CRAY_TYPE_FLOAT] * sizeof(float)) +
+			(old_savedata.lengths[CRAY_TYPE_UINT32] * sizeof(uint32_t)) +
+			(old_savedata.lengths[CRAY_TYPE_SINT32] * sizeof(int32_t)) +
+			(old_savedata.lengths[CRAY_TYPE_UINT16] * sizeof(uint16_t)) +
+			(old_savedata.lengths[CRAY_TYPE_SINT16] * sizeof(int16_t)) +
+			(old_savedata.lengths[CRAY_TYPE_UINT8] * sizeof(uint8_t)) +
+			(old_savedata.lengths[CRAY_TYPE_SINT8] * sizeof(int8_t)) +
+			(old_savedata.lengths[CRAY_TYPE_CHAR] * sizeof(char));
+
+		//The sizes aren't accurate
+		if(expected_size != data_length){
+			printf("%d %d\n", expected_size, data_length);
+			return 1;
 		}
 
 		//Allocate space for our arrays
@@ -256,7 +254,7 @@ uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t 
 		}
 
 		//Convert the buffer into our savedata struct
-		crayon_savefile_buffer_to_savedata(&old_savedata, buffer);
+		crayon_savefile_buffer_to_savedata(&old_savedata, data);
 
 		//Go through the history again, but now set the pointers for each variable. Note variables that DNE in
 		//This version should be set to NULL
@@ -350,11 +348,11 @@ uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t 
 		crayon_savefile_free_savedata(&old_savedata);
 	}
 	else{	//If same version, deserialising is as simple as serialising
-		crayon_savefile_buffer_to_savedata(data, buffer);
+		crayon_savefile_buffer_to_savedata(new_savedata, data);
 	}
 
 	printf("NEW v%d\n", details->latest_version);
-	__crayon_savefile_print_savedata(data);
+	__crayon_savefile_print_savedata(new_savedata);
 	printf("\n");
 
 	return 0;
@@ -429,6 +427,7 @@ void __crayon_savefile_print_savedata(crayon_savefile_data_t *savedata){
 	uint32_t i;
 	printf("(START)\n\n");
 
+	printf("LENGTHS\n");
 	for(i = 0; i < CRAY_NUM_TYPES; i++){
 		printf("%d, ", savedata->lengths[i]);
 	}
@@ -548,7 +547,7 @@ void crayon_savefile_set_device_bit(uint8_t *device_bitmap, uint8_t save_device_
 uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_t save_device_id){
 	char *savename = crayon_savefile_get_full_path(details, save_device_id);
 	if(!savename){
-		// printf("FAILED AT 1\n");
+		printf("FAILED AT 1\n");
 		return 1;
 	}
 
@@ -558,7 +557,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 	free(savename);
 	//File DNE
 	if(!fp){
-		// printf("FAILED AT 2\n");
+		printf("FAILED AT 2\n");
 		return 1;
 	}
 
@@ -602,31 +601,34 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 
 	#else
 
-	uint16_t length = crayon_savefile_detail_string_length(CRAY_SF_STRING_APP_ID);
-	char *app_id_buffer = malloc(sizeof(char) * length);
-	if(!app_id_buffer){
-		fclose(fp);
-		printf("FAILED AT 5\n");
-		return 1;
-	}
+	crayon_savefile_hdr_t hdr;
 
-	fread(app_id_buffer, length, 1, fp);	//The app id is at the start of the hdr on PC
+	fread(&hdr, 1, sizeof(hdr), fp);
 
 	crayon_savefile_version_t sf_version;
-	fseek(fp, CRAY_SF_HDR_SIZE, SEEK_SET);
 	fread(&sf_version, 4, 1, fp);
 	fclose(fp);
+
+	//Pass that sf_version (And maybe "hdr.app_id") through our endian-ness function
+	;
+
+	//Either it has the wrong size or the app ids somehow don't match
+	//(The later should never trigger if you use this library right)
+	if(strcmp(hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
+		fclose(fp);
+		printf("FAILED AT 6\n");
+		return 1;
+	}
 
 	details->savefile_versions[save_device_id] = sf_version;
 
 	uint8_t rv = 0;
-	if(strcmp(app_id_buffer, details->strings[CRAY_SF_STRING_APP_ID])){
+	if(strcmp(hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
 		rv = 1;
 	}
-	free(app_id_buffer);
 
 	if(rv){
-		printf("FAILED AT 6\n");
+		printf("FAILED AT 7\n");
 		return 1;
 	}
 
@@ -634,7 +636,7 @@ uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_
 
 	//Check to confirm the savefile version is not newer than it should be
 	if(sf_version > details->latest_version){
-		printf("FAILED AT 7\n");
+		printf("FAILED AT 8\n");
 		return 1;
 	}
 
@@ -1193,7 +1195,7 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	//Check to see if pkg.data_len is actually correct or not
 
 	//Read the pkg data into my struct
-	uint8_t deserialise_result = crayon_savefile_deserialise(details, (uint8_t *)pkg.data);
+	uint8_t deserialise_result = crayon_savefile_deserialise(details, (uint8_t *)pkg.data, (uint32_t)pkg.data_len);
 
 	#else
 
@@ -1203,25 +1205,26 @@ uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details){
 	//Obtain the data length
 	crayon_savefile_hdr_t hdr;
 
-	crayon_misc_encode_to_buffer((uint8_t*)&hdr.app_id, data, 16);
-	crayon_misc_encode_to_buffer((uint8_t*)&hdr.data_size, data + 16, 4);
+	crayon_misc_encode_to_buffer((uint8_t*)&hdr.name, data, sizeof(hdr.name));
+	crayon_misc_encode_to_buffer((uint8_t*)&hdr.app_id, data + sizeof(hdr.name), sizeof(hdr.app_id));
+
+	// crayon_misc_encode_to_buffer((uint8_t*)&hdr.app_id, data, 16);
 	// crayon_misc_encode_to_buffer((uint8_t*)&hdr.short_desc, data + 16, 16);
 	// crayon_misc_encode_to_buffer((uint8_t*)&hdr.long_desc, data + 32, 32);
 	// crayon_misc_encode_to_buffer((uint8_t*)&hdr.data_size, data + 64, 4);
 
 	//Either it has the wrong size or the app ids somehow don't match
 	//(The later should never trigger if you use this library right)
-	if(CRAY_SF_HDR_SIZE + hdr.data_size != pkg_size || strcmp(hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
+	if(strcmp(hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID])){
 		free(data);
-		printf("%d, %ld\n", hdr.data_size, pkg_size - CRAY_SF_HDR_SIZE);
-		printf("%s %s\n", hdr.app_id, details->strings[CRAY_SF_STRING_APP_ID]);
 		printf("Test5\n");
 		return 1;
 	}
 
 	//Read the pkg data into my struct
 	//We add CRAY_SF_HDR_SIZE to skip the header
-	uint8_t deserialise_result = crayon_savefile_deserialise(details, data + CRAY_SF_HDR_SIZE);
+	uint8_t deserialise_result = crayon_savefile_deserialise(details, data + CRAY_SF_HDR_SIZE,
+		pkg_size - CRAY_SF_HDR_SIZE);
 
 	#endif
 
@@ -1325,16 +1328,18 @@ uint8_t crayon_savefile_save_savedata(crayon_savefile_details_t *details){
 		return 1;
 	}
 
+	crayon_savefile_hdr_t hdr;
+
 	char string_buffer[32] = {0};
+	strncpy(string_buffer, "CRAYON SAVEFILE", sizeof(hdr.name));
+	fwrite(string_buffer, sizeof(char), sizeof(hdr.name), fp);
+
 	uint8_t i;
 	for(i = CRAY_SF_STRING_APP_ID; i < CRAY_SF_NUM_DETAIL_STRINGS; i++){
 		strncpy(string_buffer, details->strings[i], crayon_savefile_detail_string_length(i));
-		printf("%d: %d, %s\n", i, crayon_savefile_detail_string_length(i), string_buffer);
-
 		fwrite(string_buffer, sizeof(char), crayon_savefile_detail_string_length(i), fp);
 	}
 
-	fwrite(&length, sizeof(uint32_t), 1, fp);
 	fwrite(data, sizeof(uint8_t), length, fp);
 
 	free(data);

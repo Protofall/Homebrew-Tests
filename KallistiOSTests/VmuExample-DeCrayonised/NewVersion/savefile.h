@@ -111,13 +111,15 @@ enum {
 	#define CRAY_SF_NUM_SAVE_DEVICES 1
 	#define CRAY_SF_STORAGE 1
 
-	#define CRAY_SF_HDR_SIZE (16 + sizeof(uint32_t))	//Must be a multiple of 4 bytes long
+	#define CRAY_SF_HDR_SIZE (16 + 16)	//Must be a multiple of 4 bytes long
 	// #define CRAY_SF_HDR_SIZE (16 + 16 + 32 + sizeof(uint32_t))	//Must be a multiple of 4 bytes long
 	typedef struct crayon_savefile_hdr{
+		char name[16];	//Not actually used, but useful if you read a savefile with a hex editor
+						// SHOULD BE "CRAYON SAVEFILE" with a null terminator at the end
 		char app_id[16];
 		// char short_desc[16];
 		// char long_desc[32];
-		uint32_t data_size;
+		// uint32_t data_size;
 	} crayon_savefile_hdr_t;
 
 #endif
@@ -179,12 +181,6 @@ typedef struct crayon_savefile_details{
 //---------------------DREAMCAST SPECIFIC------------------------
 
 
-#if defined(_arch_dreamcast)
-
-vec2_s8_t crayon_savefile_dreamcast_get_port_and_slot(int8_t savefile_device_id);	//x is port, y is slot
-
-#endif
-
 void crayon_vmu_display_icon(uint8_t vmu_bitmap, void *icon);
 
 
@@ -198,7 +194,7 @@ int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t *details)
 uint16_t crayon_savefile_detail_string_length(uint8_t string_id);
 
 void crayon_savefile_serialise(crayon_savefile_details_t *details, uint8_t *buffer);
-uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *buffer);
+uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *data, uint32_t data_length);
 
 uint16_t crayon_savefile_get_device_free_blocks(int8_t device_id);
 
