@@ -39,9 +39,9 @@ int main(){
 	// sf_name[2][3] = '1';
 
 	uint8_t save_error = 1;
-	if(savefile_details.valid_devices){
+	if(savefile_details.present_devices){
 		save_error = crayon_savefile_save_savedata(&savefile_details);
-		crayon_savefile_update_valid_saves(&savefile_details, CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT);	//Updating the save
+		// crayon_savefile_update_valid_saves(&savefile_details, CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT);	//Updating the save
 	}
 
 	#if defined(_arch_dreamcast) && CRAYON_BOOT_MODE == 1
@@ -109,7 +109,8 @@ int main(){
 	char buffer2[32];
 	char buffer3[32];
 	sprintf(buffer2, "save_error: %d. load_error %d\n", save_error, load_error);
-	sprintf(buffer3, "bitmaps: %d. %d\n", savefile_details.valid_devices, savefile_details.valid_saves);
+	sprintf(buffer3, "bitmaps: %d. %d .%d\n", savefile_details.present_devices,
+		savefile_details.present_savefiles, savefile_details.current_savefiles);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer2, 0, 0);
 	draw_string(0, 0, 0, 0, 0, 0, 0, buffer3, 0, 0);

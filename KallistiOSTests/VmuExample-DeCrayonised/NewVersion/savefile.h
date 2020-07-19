@@ -103,13 +103,11 @@ enum {
 #if defined( _arch_dreamcast)
 
 	#define CRAY_SF_NUM_SAVE_DEVICES 8
-	#define CRAY_SF_STORAGE MAPLE_FUNC_MEMCARD
 	#define CRAY_SF_HDR_SIZE sizeof(vmu_hdr_t)
 
 #elif defined(_arch_pc)
 
 	#define CRAY_SF_NUM_SAVE_DEVICES 1
-	#define CRAY_SF_STORAGE 1
 
 	#define CRAY_SF_HDR_SIZE (16 + 16)	//Must be a multiple of 4 bytes long
 	// #define CRAY_SF_HDR_SIZE (16 + 16 + 32 + sizeof(uint32_t))	//Must be a multiple of 4 bytes long
@@ -140,11 +138,13 @@ typedef struct crayon_savefile_details{
 	//All the strings we have. Different systems might have a different number of strings
 	char *strings[CRAY_SF_NUM_DETAIL_STRINGS];
 
-	uint8_t valid_devices;		//Devices/Memory cards with enough space for a save file or an existing save
-	uint8_t valid_saves;		//All VMUs with a savefile (Version is latest or older)
-	crayon_savefile_version_t savefile_versions[CRAY_SF_NUM_SAVE_DEVICES];	//Stores the versions of saves.
-																			//0 if no valid savefile is present there
+	uint8_t present_devices;	//Shows any device thats present that has enough space to save too
+	uint8_t present_savefiles;	//Shows any device with any savefile from any version
+	uint8_t current_savefiles;	//Only shows savefiles in the current format
+	crayon_savefile_version_t savefile_versions[CRAY_SF_NUM_SAVE_DEVICES];	//Stores the versions of savefiles.
 
+
+	//Move "valid_vmu_screens" into the peripherals section
 	uint8_t valid_vmu_screens;	//All VMU screens (Only applies for DC)
 
 	//This tells us what storage system we save to
@@ -183,20 +183,40 @@ typedef struct crayon_savefile_details{
 
 void crayon_vmu_display_icon(uint8_t vmu_bitmap, void *icon);
 
+//Returns an 8 bit var for each VMU (a1a2b1b2c1c2d1d2)
+//First function is a macro so you don't need to remember the function name
+#if defined(_arch_dreamcast)
+#define crayon_savefile_get_valid_screens()  crayon_savefile_get_valid_function(MAPLE_FUNC_LCD)
+#else
+#define crayon_savefile_get_valid_screens()  0
+#endif
+
+#if defined(_arch_dreamcast)
+
+//0 if device is valid
+uint8_t crayon_savefile_check_device_for_function(uint32_t function, int8_t save_device_id);
+
+//Returns a bitmap of all vmus with a screen
+uint8_t crayon_savefile_dreamcast_get_screen_bitmap();	//Can be used to find all devices with function X
+
+#endif
+
 
 //---------------------Internal use------------------------
 
 
-uint8_t crayon_savefile_check_device_for_function(uint32_t function, int8_t save_device_id);	//0 if device is valid
-uint16_t crayon_savefile_bytes_to_blocks(uint32_t bytes);	//Takes a byte count and returns no. blocks needed to save it
-int16_t crayon_savefile_get_save_block_count(crayon_savefile_details_t *details);	//Returns the number of blocks your save file will need (Uncompressed)
+//Takes a byte count and returns no. blocks needed to save it
+uint16_t crayon_savefile_bytes_to_blocks(uint32_t bytes);
+
+//Returns the number of bytes your save file will need
+uint32_t crayon_savefile_get_savefile_size(crayon_savefile_details_t *details);
 
 uint16_t crayon_savefile_detail_string_length(uint8_t string_id);
 
 void crayon_savefile_serialise(crayon_savefile_details_t *details, uint8_t *buffer);
 uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t *data, uint32_t data_length);
 
-uint16_t crayon_savefile_get_device_free_blocks(int8_t device_id);
+uint32_t crayon_savefile_get_device_free_space(int8_t device_id);
 
 //Returns a pointer on success, returns NULL if either the the save_device_id is OOB or failed malloc
 char *crayon_savefile_get_full_path(crayon_savefile_details_t *details, int8_t save_device_id);
@@ -208,13 +228,14 @@ void crayon_savefile_buffer_to_savedata(crayon_savefile_data_t *data, uint8_t *b
 
 uint8_t crayon_savefile_set_string(crayon_savefile_details_t *details, const char *string, uint8_t string_id);
 
+
 //---------------Both internal and external----------------
 
 
 uint8_t crayon_savefile_get_device_bit(uint8_t device_bitmap, uint8_t save_device_id);	//Returns boolean
 void crayon_savefile_set_device_bit(uint8_t *device_bitmap, uint8_t save_device_id);	//Updates device_bitmap
 
-//Returns 0 if a savefile on that device exists, 1 if there's an error/DNE/version is newer than latest
+//Returns 0 if a savefile on that device exists with no issues, 1 if there's an error/DNE/version is newer than latest
 uint8_t crayon_savefile_check_savedata(crayon_savefile_details_t *details, int8_t save_device_id);
 
 
@@ -268,21 +289,7 @@ void *crayon_savefile_get_variable_ptr(crayon_savefile_old_variable_t *array, ui
 uint8_t crayon_savefile_solidify(crayon_savefile_details_t *details);
 
 //This function will update the valid devices and/or the current savefile bitmaps
-#define CRAY_SAVEFILE_UPDATE_MODE_DEVICE_PRESENT (1 << 0)
-#define CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT (1 << 1)
-#define CRAY_SAVEFILE_UPDATE_MODE_BOTH CRAY_SAVEFILE_UPDATE_MODE_SAVE_PRESENT | CRAY_SAVEFILE_UPDATE_MODE_DEVICE_PRESENT
-void crayon_savefile_update_valid_saves(crayon_savefile_details_t *details, uint8_t modes);
-
-//Returns an 8 bit var for each VMU (a1a2b1b2c1c2d1d2)
-//First function is a macro so you don't need to remember the function name
-#if defined(_arch_dreamcast)
-#define crayon_savefile_get_valid_screens()  crayon_savefile_get_valid_function(MAPLE_FUNC_LCD)
-#else
-#define crayon_savefile_get_valid_screens()  0
-#endif
-
-//Returns a bitmap of all devices that have this function
-uint8_t crayon_savefile_get_valid_function(uint32_t function);	//Can be used to find all devices with function X
+void crayon_savefile_update_valid_saves(crayon_savefile_details_t *details);
 
 //Returns 0 on success and 1 or more if failure. Handles loading and saving of uncompressed savefiles
 uint8_t crayon_savefile_load_savedata(crayon_savefile_details_t *details);
