@@ -222,7 +222,7 @@ uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t 
 			(old_savedata.lengths[CRAY_TYPE_SINT8] * sizeof(int8_t)) +
 			(old_savedata.lengths[CRAY_TYPE_CHAR] * sizeof(char));
 
-		//The sizes aren't accurate
+		//The size is off, the savefile must have been tampered with
 		if(expected_size != data_length){
 			printf("%d %d\n", expected_size, data_length);
 			return 1;
@@ -348,6 +348,11 @@ uint8_t crayon_savefile_deserialise(crayon_savefile_details_t *details, uint8_t 
 		crayon_savefile_free_savedata(&old_savedata);
 	}
 	else{	//If same version, deserialising is as simple as serialising
+		//The sizes aren't accurate
+		if(details->savedata_size - sizeof(crayon_savefile_version_t) != data_length){
+			return 1;
+		}
+
 		crayon_savefile_buffer_to_savedata(new_savedata, data);
 	}
 
