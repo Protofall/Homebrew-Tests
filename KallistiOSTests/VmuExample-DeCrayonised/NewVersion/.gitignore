@@ -1,9 +1,0 @@
-*.o
-*.elf
-*.bin
-*.cdi
-*.7z
-*.iso
-cdfs/*
-VmuExample-DeCrayonised
-
