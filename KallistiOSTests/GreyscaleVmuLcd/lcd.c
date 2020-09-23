@@ -3,8 +3,8 @@
 uint16_t lcd_offset = 0;
 uint8_t *lcd_icon = NULL;
 uint8_t screen_bitmap = 0;
-// uint8_t frames = 1;
-uint8_t frames = 60;
+uint8_t frames = 1;
+// uint8_t frames = 60;
 
 //We use a double pointer because we want to modify the pointer itself with malloc
 int16_t setup_vmu_icon_load(uint8_t **vmu_lcd_icon, char *icon_path){
@@ -72,8 +72,7 @@ KOS_INIT_ROMDISK(romdisk_boot);
 int main(void){
 	pvr_init_defaults();	// Init kos
 
-	// setup_vmu_icon_load(&lcd_icon, "/rd/out.bin");
-	setup_vmu_icon_load(&lcd_icon, "/rd/mario_lcd.bin");
+	setup_vmu_icon_load(&lcd_icon, "/rd/out.bin");
 
 	uint32_t prev_buttons[4] = {0};
 	uint8_t counter2 = 0;
