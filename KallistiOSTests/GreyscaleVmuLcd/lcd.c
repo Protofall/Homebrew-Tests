@@ -3,16 +3,17 @@
 uint16_t lcd_offset = 0;
 uint8_t *lcd_icon = NULL;
 uint8_t screen_bitmap = 0;
+// uint8_t frames = 1;
 uint8_t frames = 60;
 
 //We use a double pointer because we want to modify the pointer itself with malloc
 int16_t setup_vmu_icon_load(uint8_t **vmu_lcd_icon, char *icon_path){
-	*vmu_lcd_icon = malloc(6 * 32);	//6 * 32 because we have 48/32 1bpp so we need that / 8 bytes
+	*vmu_lcd_icon = malloc(6 * 32 * frames);	//6 * 32 because we have 48/32 1bpp so we need 192 / 8 bytes
 	FILE * file_lcd_icon = fopen(icon_path, "rb");
 	if(!file_lcd_icon){return -1;}
 
 	// If the icon is right, it *must* be a multiple of 192 bytes
-	size_t res = fread(*vmu_lcd_icon, 192, frames * 3, file_lcd_icon);
+	size_t res = fread(*vmu_lcd_icon, 192, frames, file_lcd_icon);
 	fclose(file_lcd_icon);
 
 	screen_bitmap = (1 << 8) - 1;
@@ -39,6 +40,7 @@ void crayon_vmu_display_icon(uint8_t vmu_bitmap, void *icon, uint16_t offset){
 					continue;
 				}
 				vmu_draw_lcd(vmu, icon + true_offset);
+				return;
 			}
 		}
 	}
@@ -70,6 +72,7 @@ KOS_INIT_ROMDISK(romdisk_boot);
 int main(void){
 	pvr_init_defaults();	// Init kos
 
+	// setup_vmu_icon_load(&lcd_icon, "/rd/out.bin");
 	setup_vmu_icon_load(&lcd_icon, "/rd/mario_lcd.bin");
 
 	uint32_t prev_buttons[4] = {0};
@@ -94,10 +97,14 @@ int main(void){
 
 		draw_frame();
 
-		lcd_offset++;
-		if(lcd_offset >= frames){
-			lcd_offset = 0;
-		}
+		// counter2++;
+		// if(counter2 >= 30){
+			// counter2 = 0;
+			lcd_offset++;
+			if(lcd_offset >= frames){
+				lcd_offset = 0;
+			}
+		// }
 	}
 
 	exitmainloop:
