@@ -1,0 +1,32 @@
+sutherland-hodgman
+
+sutherland-hodgman algorithm is about checking *edges* of the clipping area, not vertexes of the sprite.
+"We will tell for each vertex whether it is in the inner or outer side of each edge of the clipping area" (Edges of the camera poly)
+
+High level steps:
+- Camera poly is an AABB in our case
+- We check against the camera poly's edges in order LBRT (But the order doesn't exactly matter)
+- The output of each edge will be the input for the next
+- For each edge we:
+	- We start from our first vert (v1) and find the edge to the next vert (v2)
+		1 - If both verts are inside, save v2												(in-in)
+		2 - If both are outside, save none													(out-out)
+		3 - If only v1 is inside, Create v1' and save it									(in-out)
+		4 - If only v2 is inside, Create v1' and save that then save v2 (In that order)		(out-in)
+		5 - Go back to step 1, but with v2,v3 then v3,v4, then v4,v1
+			- Technically if we just had an (in-out) we would then do v1',v3 since v2 wasn't saved...maybe? idk
+			- On second thought I think the above statement is wrong, just like if we get (out-out), we still do v2,v3 next
+	- When we start the next edge, the vertex order seems to be the order we saved them in.
+
+Making v1'
+	- Its the intersection of the camera edge plane and the sprite edge
+
+
+
+
+
+
+
+Verify the final output has all verts in order, ie if we drew a line between neighbouring verts from our array (+ final vert to first vert) then it forms a closed poly where no edges cut through it.
+
+Optimise Crayon's code so rather than the camera being a list of vertexes, just make it 2 vec_2_f_t's with the top left and bottom right coords. Saves on space and not needing to do range() function.

@@ -222,6 +222,8 @@ float crayon_graphic_line_plane_intersect(float x0, float y0, float x1, float y1
 }
 
 // This function might modify holder_vert_x, but it doesn't really matter anyways
+  // This video taught it so well, very easy to follow:
+  // https://www.youtube.com/watch?v=Euuw72Ymu0M
 int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] camera_x,
     float[] camera_y, int crop_len){
   
@@ -357,23 +359,23 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   curr_val = camera_coords[1];
   prev_vert_index = (crop_len - 1) + array_mid;
   in1 = (crop_vert_y[prev_vert_index] >= curr_val);  // The last vert
-  for(i = array_mid; i < crop_len + array_mid; i++){
-    in2 = (crop_vert_y[i] >= curr_val);
-    if(in1 && in2){  // both in, Save vert i
-      crop_vert_x[new_len] = crop_vert_x[i];
-      crop_vert_y[new_len] = crop_vert_y[i];
+  for(i = 0; i < crop_len; i++){
+    in2 = (crop_vert_y[array_mid + i] >= curr_val);
+    if(in1 && in2){  // both in, Save vert array_mid + i
+      crop_vert_x[new_len] = crop_vert_x[array_mid + i];
+      crop_vert_y[new_len] = crop_vert_y[array_mid + i];
       new_len++;
     }
     else if(!in1 && in2){  // Make v1', then save v1' then save v2
-      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, false);
+      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
       crop_vert_y[new_len] = curr_val;
       
-      crop_vert_x[new_len + 1] = crop_vert_x[i];
-      crop_vert_y[new_len + 1] = crop_vert_y[i];
+      crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
+      crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
       new_len += 2;
     }
     else if(in1 && !in2){  // Make v1', then save v1'
-      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, false);
+      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
       crop_vert_y[new_len] = curr_val;
       new_len++;
     }
@@ -381,7 +383,7 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
     
     // Update the prev vert
     in1 = in2;
-    prev_vert_index = i;
+    prev_vert_index = array_mid + i;
   }
   if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
     return new_len;
@@ -443,23 +445,23 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   curr_val = camera_coords[3];
   prev_vert_index = (crop_len - 1) + array_mid;
   in1 = (crop_vert_y[prev_vert_index] <= curr_val);  // The last vert
-  for(i = array_mid; i < crop_len + array_mid; i++){
-    in2 = (crop_vert_y[i] <= curr_val);
-    if(in1 && in2){  // both in, Save vert i
-      crop_vert_x[new_len] = crop_vert_x[i];
-      crop_vert_y[new_len] = crop_vert_y[i];
+  for(i = 0; i < crop_len; i++){
+    in2 = (crop_vert_y[array_mid + i] <= curr_val);
+    if(in1 && in2){  // both in, Save vert array_mid + i
+      crop_vert_x[new_len] = crop_vert_x[array_mid + i];
+      crop_vert_y[new_len] = crop_vert_y[array_mid + i];
       new_len++;
     }
     else if(!in1 && in2){  // Make v1', then save v1' then save v2
-      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, false);
+      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
       crop_vert_y[new_len] = curr_val;  // This can be the wrong y boarder.
       
-      crop_vert_x[new_len + 1] = crop_vert_x[i];
-      crop_vert_y[new_len + 1] = crop_vert_y[i];
+      crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
+      crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
       new_len += 2;
     }
     else if(in1 && !in2){  // Make v1', then save v1'
-      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, false);
+      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
       crop_vert_y[new_len] = curr_val;
       new_len++;
     }
@@ -467,7 +469,7 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
     
     // Update the prev vert
     in1 = in2;
-    prev_vert_index = i;
+    prev_vert_index = array_mid + i;
   }
   if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
     return new_len;
