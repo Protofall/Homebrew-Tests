@@ -1,0 +1,81 @@
+
+untextured poly clipper.
+
+Have some float arrays for storing vertex coords and UVs prior to inserting them into the
+actual data format. That way we can easily pass our verts into the overlap/cropping functions
+
+cropping function should have a source float list and a dest one. Each one should be max_possible_verts * 2 (because x+y). I believe that its possible to get 8 verts, but idk if that's the max value.
+
+sutherland_hogan_crop(float *src, float *dest, uint8_t side);
+
+need to then get the vertex list and order it. Each vert depends on the last 2 with swapping winding order.
+
+Then once all cropping has occured, we set up the actual vert data for submission.
+
+Then all that needs to be done for enhanced sprites render is generate the UVs based off the original un-cropped coords (I think it will allow for easier calculations)
+
+I might then use these ideas to improve the simple sprite render because it was a bit rushed and feels rather buggy (eg sprite stretch issue with UVs)
+
+
+
+
+loop content:
+	- rotation/colour are the only multis. Set on i == 0 (and every i if multi)
+		- rotation check sets a float to the rotation value
+		- colour sets the argb colour param of vertex "0"
+	- Every loop we set first vertex's z coord and initial (unrotated) x/y coords
+	- If the rotation value != 0, then rotate the coords (Involves some division to get the mid point)
+	- floor all the verts (Probably should get floor of first vert and subtract that from every other vert)
+	- Set the z and argb/colour of the other verts
+
+What needs to be added/changed
+	- Initial vert x/y should be stored in a float (Or vec2_f_t) array and be in clockwise order (Same as DC sprite)
+		- It should also take into account camera scaling (Currently it only uses camera offset)
+	- After rotation (And flooring) then we check OOB if the flag is enabled
+		- It does have a few divisions, for the unit vectors
+	- After OOB checks we then do cropping checks if the flag is enabled
+		- If ALL sizes of camera are on TA boundrys (Or we're on PC with scissor test), then DON'T do hardware rendering
+		- Else we do software rendering
+		- Would need to run sutherland-hoganman algorithm
+		- Then need to re-order final vertex list into something that we can render
+		- Maybe return a bool to say if anything was cropped. If nothing was ever cropped, we can skip the re-order step (Only swapping the last 2 verts)
+	- Maybe remove (Or re-locate) the final vert floor-ing?
+	- Change the vertex list size to the max possible num of vertexes (I *think* its 8)
+		- When setting the argb/colour and z use the current vert length. Same for the pvr_prim() call
+
+Optimisations
+	- None really needed for this. The initial vertexes are always re-calculated every time. The vertex length will need to be updated (Default 4)
+
+Vars needed that are always active
+	- poly ctx/hdr (Not really, but they can't be recycled)
+	- 1 float for rotation
+	- 8 poly_verts
+	- 1 int "i"
+	- 3 ints rotation_index, colour_index, zero (Might undo this later)
+	- 2 floats for x and y camera scaling ("camera_scale")
+	- 1 uint8_t for multi dims
+
+Vars needed that aren't used at some point
+	- 16 floats for the possible vertex coords (x2 because of sutherland hogman and re-ordering alorithm)
+	- 2 floats (vec2_f_t) for rotated vert coords
+	- 2 floats (vec2_f_t) for mid coords
+	- 1 (vec2_f_t) as a parameter for the point to rotate.
+
+Vars needed that kinda could be shared
+	- 1 uint8_t for "skip" option
+	- 1 int "j"
+	- 1 uint8_t size of actual vert array
+
+
+Params
+	- Camera
+	- Sprite array
+	- poly_list_mode
+	- options
+
+Vars that are always active
+
+possible sorting alg
+	- Find vert with smallest Y (Furthest up) (If multiple share the smallest, just choose one of them)
+	- Add it, then add the one on the right, then the left, keep alternating until done
+
