@@ -227,47 +227,114 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   
   int array_mid = ARR_SIZE / 2;
 
-  // LBRT order
-  float camera_min_x = camera_x[0];
-  float camera_min_y = camera_y[0];
-  float camera_max_x = camera_x[2];
-  float camera_max_y = camera_y[2];
+  // L, T, R, B
+  float[] camera_coords = new float[4];
+  camera_coords[0] = camera_x[0];  // min_x
+  camera_coords[1] = camera_y[0];  // min_y
+  camera_coords[2] = camera_x[2];  // max_x
+  camera_coords[3] = camera_y[2];  // max_y
   
-  int new_len;
-  //boolean indexMode = false;  // false = Data is from indexes 0 - 7, true = indexes 8 - 15
+  int new_len = 0;  // Java complains it may not be initialised when we return at the end...but j loop guarantees its initialised...
+  boolean indexMode;  // false = Data is from indexes 0 - 7, true = indexes 8 - 15
   
   // Some vars
   boolean in1, in2;  // True if variable is in
-  int i, prev_vert_index;
+  int i, prev_vert_index, offset = 0;
   float curr_val;
+  
+  //println("Start");
+  //int j;
+  //for(j = 0; j < 4; j++){
+  //  // I'm going in order v4->v1, v1->v2, v2->v3, v3->v4 so I don't have to modulo check every loop
+  //  new_len = 0;
+  //  curr_val = camera_coords[j];
+  //  indexMode = (j % 2 == 0);  // First loop its true
+  //  offset = (indexMode ? array_mid : 0);
+  //  prev_vert_index = (crop_len - 1) + offset;
+  //  in1 = (crop_vert_x[prev_vert_index] >= curr_val);  // The last vert
+  //  if(j > 1){in1 = !in1;}
+  //  println(new_len + ", " + crop_len + ", " + curr_val + ", " + indexMode + ", " + offset + ", " + prev_vert_index + ", " + in1);
+  //  for(i = (indexMode ? 0 : array_mid); i < crop_len + (indexMode ? 0: array_mid); i++){
+  //    in2 = (crop_vert_x[i] >= curr_val);
+  //    if(j > 1){in2 = !in2;}
+  //    println(i + "-th loop. in2 = " + in2);
+      
+  //    if(in1 && in2){  // both IN, Save vert i
+  //      crop_vert_x[offset + new_len] = crop_vert_x[i];
+  //      crop_vert_y[offset + new_len] = crop_vert_y[i];
+  //      new_len++;
+  //    }
+  //    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
+  //      if(indexMode){
+  //        crop_vert_x[offset + new_len] = curr_val;
+  //        crop_vert_y[offset + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, indexMode);
+  //      }
+  //      else{
+  //        crop_vert_x[offset + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, indexMode);
+  //        crop_vert_y[offset + new_len] = curr_val;
+  //      }
+  //      if(in2){  // OUT-IN, save v2 aswell
+  //        crop_vert_x[offset + new_len + 1] = crop_vert_x[i];
+  //        crop_vert_y[offset + new_len + 1] = crop_vert_y[i];
+  //        new_len += 2;
+  //      }
+  //      else{  // IN-OUT
+  //        new_len++;
+  //      } 
+  //    }
+  //    // If both are OUT, we discard both
+      
+  //    // Update the prev vert
+  //    in1 = in2;
+  //    prev_vert_index = i;
+  //  }
+  //  if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
+  //    return new_len;
+  //  }
+  //  crop_len = new_len;
+  //  if(debug && crop_len >= 8){
+  //    println("After " + i + "-th Left crop, we have " + crop_len + " verts");
+  //  }
+  //}
+  
+  //return new_len;
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   // Left side first
     // I'm going in order v4->v1, v1->v2, v2->v3, v3->v4 so I don't have to modulo check every loop
   new_len = 0;
-  curr_val = camera_min_x;
+  curr_val = camera_coords[0];
   prev_vert_index = crop_len - 1;
   in1 = (crop_vert_x[prev_vert_index] >= curr_val);  // The last vert
   for(i = 0; i < crop_len; i++){
     in2 = (crop_vert_x[i] >= curr_val);
-    if(in1 && in2){  // both in, Save vert i
+    if(in1 && in2){  // both IN, Save vert i
       crop_vert_x[array_mid + new_len] = crop_vert_x[i];
       crop_vert_y[array_mid + new_len] = crop_vert_y[i];
       new_len++;
     }
-    else if(!in1 && in2){  // Make v1', then save v1' then save v2
+    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
       crop_vert_x[array_mid + new_len] = curr_val;
       crop_vert_y[array_mid + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, true);
-      
-      crop_vert_x[array_mid + new_len + 1] = crop_vert_x[i];
-      crop_vert_y[array_mid + new_len + 1] = crop_vert_y[i];
-      new_len += 2;
+      if(in2){  // OUT-IN, save v2 aswell
+        crop_vert_x[array_mid + new_len + 1] = crop_vert_x[i];
+        crop_vert_y[array_mid + new_len + 1] = crop_vert_y[i];
+        new_len += 2;
+      }
+      else{  // IN-OUT
+        new_len++;
+      } 
     }
-    else if(in1 && !in2){  // Make v1', then save v1'
-      crop_vert_x[array_mid + new_len] = curr_val;
-      crop_vert_y[array_mid + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, true);
-      new_len++;
-    }
-    // If both are out, we discard both
+    // If both are OUT, we discard both
     
     // Update the prev vert
     in1 = in2;
@@ -284,21 +351,14 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   
   // -----------------------------
   
-  // Stuff
-  // First: 400.0, 520.0 (Bottom left)
-  // Out-In 400.0, 200.0 (Top left)
-  // In-In 560.0, 200.0 (Top Right)
-  // In-Out 560.0, 520.0 (Botom Right)
-  // Out-Out 400.0, 520.0 (Bottom Left)
   
-
-  // Bottom side
+  // Top side
   new_len = 0;
-  curr_val = camera_max_y;
+  curr_val = camera_coords[1];
   prev_vert_index = (crop_len - 1) + array_mid;
-  in1 = (crop_vert_y[prev_vert_index] <= curr_val);  // The last vert
+  in1 = (crop_vert_y[prev_vert_index] >= curr_val);  // The last vert
   for(i = array_mid; i < crop_len + array_mid; i++){
-    in2 = (crop_vert_y[i] <= curr_val);
+    in2 = (crop_vert_y[i] >= curr_val);
     if(in1 && in2){  // both in, Save vert i
       crop_vert_x[new_len] = crop_vert_x[i];
       crop_vert_y[new_len] = crop_vert_y[i];
@@ -306,7 +366,7 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
     }
     else if(!in1 && in2){  // Make v1', then save v1' then save v2
       crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, false);
-      crop_vert_y[new_len] = curr_val;  // This can be the wrong y boarder.
+      crop_vert_y[new_len] = curr_val;
       
       crop_vert_x[new_len + 1] = crop_vert_x[i];
       crop_vert_y[new_len + 1] = crop_vert_y[i];
@@ -328,7 +388,7 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   }
   crop_len = new_len;
   if(debug && crop_len >= 8){
-    println("After Bottom crop, we have " + crop_len + " verts");
+    println("After Top crop, we have " + crop_len + " verts");
   }
   
   
@@ -337,7 +397,7 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   
   // Right side
   new_len = 0;
-  curr_val = camera_max_x;
+  curr_val = camera_coords[2];
   prev_vert_index = crop_len - 1;
   in1 = (crop_vert_x[prev_vert_index] <= curr_val);  // The last vert
   for(i = 0; i < crop_len; i++){
@@ -378,13 +438,13 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   // -----------------------------
   
   
-  // Top side
+  // Bottom side
   new_len = 0;
-  curr_val = camera_min_y;
+  curr_val = camera_coords[3];
   prev_vert_index = (crop_len - 1) + array_mid;
-  in1 = (crop_vert_y[prev_vert_index] >= curr_val);  // The last vert
+  in1 = (crop_vert_y[prev_vert_index] <= curr_val);  // The last vert
   for(i = array_mid; i < crop_len + array_mid; i++){
-    in2 = (crop_vert_y[i] >= curr_val);
+    in2 = (crop_vert_y[i] <= curr_val);
     if(in1 && in2){  // both in, Save vert i
       crop_vert_x[new_len] = crop_vert_x[i];
       crop_vert_y[new_len] = crop_vert_y[i];
@@ -392,7 +452,7 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
     }
     else if(!in1 && in2){  // Make v1', then save v1' then save v2
       crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, false);
-      crop_vert_y[new_len] = curr_val;
+      crop_vert_y[new_len] = curr_val;  // This can be the wrong y boarder.
       
       crop_vert_x[new_len + 1] = crop_vert_x[i];
       crop_vert_y[new_len + 1] = crop_vert_y[i];
@@ -414,8 +474,9 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   }
   crop_len = new_len;
   if(debug && crop_len >= 8){
-    println("After Top crop, we have " + crop_len + " verts");
+    println("After Bottom crop, we have " + crop_len + " verts");
   }
+
   
   return new_len;
 }
@@ -438,14 +499,10 @@ void renderSprite(float[] x, float[] y, float[] camera_x, float[] camera_y){
   float[] crop_vert_x = new float[ARR_SIZE];  // I think 8 will be the max vertexes, but we need double because we'll be saving and using arrays at the same time.
   float[] crop_vert_y = new float[ARR_SIZE];
   
+  // Copy our verts into the new arrays
   for(int i = 0; i < crop_len; i++){
     crop_vert_x[i] = x[i];
     crop_vert_y[i] = y[i];
-  }
-  
-  for(int i = crop_len; i < ARR_SIZE / 2; i++){
-    crop_vert_x[i] = 10;
-    crop_vert_y[i] = 10;
   }
   
   crop_len = sutherland_hodgman_alg(crop_vert_x, crop_vert_y, camera_x, camera_y, crop_len);
@@ -454,23 +511,28 @@ void renderSprite(float[] x, float[] y, float[] camera_x, float[] camera_y){
     println("Currently uses " + crop_len + " verts");
   }
   
-  ARR_SIZE = 0;
-  for(int i = ARR_SIZE / 2; i < crop_len + (ARR_SIZE / 2) - 1; i++){
+  // Don't render anything because we can't
+  if(crop_len < 2){
+    return;
+  }
+  
+  //ARR_SIZE = 0;
+  //for(int i = ARR_SIZE / 2; i < crop_len + (ARR_SIZE / 2) - 1; i++){
+  //  line(crop_vert_x[i], crop_vert_y[i], crop_vert_x[i+1], crop_vert_y[i+1]);
+  //}
+  //line(crop_vert_x[crop_len + (ARR_SIZE / 2) - 1], crop_vert_y[crop_len + (ARR_SIZE / 2) - 1], crop_vert_x[ARR_SIZE / 2], crop_vert_y[ARR_SIZE / 2]);  // From v10-15 to v8
+  
+  ////println("It is: " + crop_len);
+  ////for(int i = ARR_SIZE / 2; i < crop_len + (ARR_SIZE / 2); i++){
+  ////  println("Coords: " + crop_vert_x[i] + ", " + crop_vert_y[i]);
+  ////}
+  //ARR_SIZE = 64;
+  
+  // Render it
+  for(int i = 0; i < crop_len - 1; i++){
     line(crop_vert_x[i], crop_vert_y[i], crop_vert_x[i+1], crop_vert_y[i+1]);
   }
-  line(crop_vert_x[crop_len + (ARR_SIZE / 2) - 1], crop_vert_y[crop_len + (ARR_SIZE / 2) - 1], crop_vert_x[ARR_SIZE / 2], crop_vert_y[ARR_SIZE / 2]);  // From v10-15 to v8
-  
-  //println("It is: " + crop_len);
-  //for(int i = ARR_SIZE / 2; i < crop_len + (ARR_SIZE / 2); i++){
-  //  println("Coords: " + crop_vert_x[i] + ", " + crop_vert_y[i]);
-  //}
-  ARR_SIZE = 64;
-  
-  //// Replace this with the crop_vert_x/y elements
-  //line(x[0], y[0], x[1], y[1]);
-  //line(x[1], y[1], x[2], y[2]);
-  //line(x[2], y[2], x[3], y[3]);
-  //line(x[3], y[3], x[0], y[0]);
+  line(crop_vert_x[crop_len - 1], crop_vert_y[crop_len - 1], crop_vert_x[0], crop_vert_y[0]);
 }
 
 void draw(){
@@ -564,22 +626,32 @@ void keyPressed() {
   if(key == 'Q' || key == 'q'){
     angle--;
   }
+  
+  // Vert order: TL, TR, BR, BL
   if(key == CODED){
     if(keyCode == UP){
       vert_y[2]++;
       vert_y[3]++;
+      vert_y[0]--;
+      vert_y[1]--;
     }
     if(keyCode == DOWN){
       vert_y[2]--;
       vert_y[3]--;
+      vert_y[0]++;
+      vert_y[1]++;
     }
     if(keyCode == LEFT){
       vert_x[1]--;
-      vert_x[3]--;
+      vert_x[2]--;
+      vert_x[0]++;
+      vert_x[3]++;
     }
     if(keyCode == RIGHT){
       vert_x[1]++;
-      vert_x[3]++;
+      vert_x[2]++;
+      vert_x[0]--;
+      vert_x[3]--;
     }
   }
   if(key == 'W' || key == 'w'){
