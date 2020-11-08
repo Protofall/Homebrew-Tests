@@ -361,25 +361,24 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   in1 = (crop_vert_y[prev_vert_index] >= curr_val);  // The last vert
   for(i = 0; i < crop_len; i++){
     in2 = (crop_vert_y[array_mid + i] >= curr_val);
-    if(in1 && in2){  // both in, Save vert array_mid + i
+    if(in1 && in2){  // both IN, Save vert array_mid + i
       crop_vert_x[new_len] = crop_vert_x[array_mid + i];
       crop_vert_y[new_len] = crop_vert_y[array_mid + i];
       new_len++;
     }
-    else if(!in1 && in2){  // Make v1', then save v1' then save v2
+    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
       crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
       crop_vert_y[new_len] = curr_val;
-      
-      crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
-      crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
-      new_len += 2;
+      if(in2){  // OUT-IN, save v2 aswell
+        crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
+        crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
+        new_len += 2;
+      }
+      else{  // IN-OUT
+        new_len++;
+      } 
     }
-    else if(in1 && !in2){  // Make v1', then save v1'
-      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
-      crop_vert_y[new_len] = curr_val;
-      new_len++;
-    }
-    // If both are out, we discard both
+    // If both are OUT, we discard both
     
     // Update the prev vert
     in1 = in2;
@@ -404,25 +403,24 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   in1 = (crop_vert_x[prev_vert_index] <= curr_val);  // The last vert
   for(i = 0; i < crop_len; i++){
     in2 = (crop_vert_x[i] <= curr_val);
-    if(in1 && in2){  // both in, Save vert i
+    if(in1 && in2){  // both IN, Save vert i
       crop_vert_x[array_mid + new_len] = crop_vert_x[i];
       crop_vert_y[array_mid + new_len] = crop_vert_y[i];
       new_len++;
     }
-    else if(!in1 && in2){  // Make v1', then save v1' then save v2
+    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
       crop_vert_x[array_mid + new_len] = curr_val;
       crop_vert_y[array_mid + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, true);
-      
-      crop_vert_x[array_mid + new_len + 1] = crop_vert_x[i];
-      crop_vert_y[array_mid + new_len + 1] = crop_vert_y[i];
-      new_len += 2;
+      if(in2){  // OUT-IN, save v2 aswell
+        crop_vert_x[array_mid + new_len + 1] = crop_vert_x[i];
+        crop_vert_y[array_mid + new_len + 1] = crop_vert_y[i];
+        new_len += 2;
+      }
+      else{  // IN-OUT
+        new_len++;
+      } 
     }
-    else if(in1 && !in2){  // Make v1', then save v1'
-      crop_vert_x[array_mid + new_len] = curr_val;
-      crop_vert_y[array_mid + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, true);
-      new_len++;
-    }
-    // If both are out, we discard both
+    // If both are OUT, we discard both
     
     // Update the prev vert
     in1 = in2;
@@ -447,25 +445,24 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   in1 = (crop_vert_y[prev_vert_index] <= curr_val);  // The last vert
   for(i = 0; i < crop_len; i++){
     in2 = (crop_vert_y[array_mid + i] <= curr_val);
-    if(in1 && in2){  // both in, Save vert array_mid + i
+    if(in1 && in2){  // both IN, Save vert array_mid + i
       crop_vert_x[new_len] = crop_vert_x[array_mid + i];
       crop_vert_y[new_len] = crop_vert_y[array_mid + i];
       new_len++;
     }
-    else if(!in1 && in2){  // Make v1', then save v1' then save v2
-      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
-      crop_vert_y[new_len] = curr_val;  // This can be the wrong y boarder.
-      
-      crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
-      crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
-      new_len += 2;
-    }
-    else if(in1 && !in2){  // Make v1', then save v1'
+    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
       crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
       crop_vert_y[new_len] = curr_val;
-      new_len++;
+      if(in2){  // OUT-IN, save v2 aswell
+        crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
+        crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
+        new_len += 2;
+      }
+      else{  // IN-OUT
+        new_len++;
+      } 
     }
-    // If both are out, we discard both
+    // If both are OUT, we discard both
     
     // Update the prev vert
     in1 = in2;
