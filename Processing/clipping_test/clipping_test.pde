@@ -221,6 +221,13 @@ float crayon_graphic_line_plane_intersect(float x0, float y0, float x1, float y1
   return (m * curr_val) + c;
 }
 
+boolean crayon_graphics_inbounds(float x, float y, float axis, int j){
+  if(j == 0){return (x >= axis);}
+  else if(j == 1){return (y >= axis);}
+  else if(j == 2){return (x < axis);}
+  else{return (y < axis);}
+}
+
 // This function might modify holder_vert_x, but it doesn't really matter anyways
   // This video taught it so well, very easy to follow:
   // https://www.youtube.com/watch?v=Euuw72Ymu0M
@@ -241,243 +248,245 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   
   // Some vars
   boolean in1, in2;  // True if variable is in
-  int i, prev_vert_index, offset = 0;
+  int i, prev_vert_index;
   float curr_val;
-  
-  //println("Start");
-  //int j;
-  //for(j = 0; j < 4; j++){
-  //  // I'm going in order v4->v1, v1->v2, v2->v3, v3->v4 so I don't have to modulo check every loop
-  //  new_len = 0;
-  //  curr_val = camera_coords[j];
-  //  indexMode = (j % 2 == 0);  // First loop its true
-  //  offset = (indexMode ? array_mid : 0);
-  //  prev_vert_index = (crop_len - 1) + offset;
-  //  in1 = (crop_vert_x[prev_vert_index] >= curr_val);  // The last vert
-  //  if(j > 1){in1 = !in1;}
-  //  println(new_len + ", " + crop_len + ", " + curr_val + ", " + indexMode + ", " + offset + ", " + prev_vert_index + ", " + in1);
-  //  for(i = (indexMode ? 0 : array_mid); i < crop_len + (indexMode ? 0: array_mid); i++){
-  //    in2 = (crop_vert_x[i] >= curr_val);
-  //    if(j > 1){in2 = !in2;}
-  //    println(i + "-th loop. in2 = " + in2);
+    
+  // Verify this is good
+  int j;
+  int offset1, offset2;
+  boolean axis = false;
+  for(j = 0; j < 4; j++){
+    new_len = 0;
+    curr_val = camera_coords[j];
+    axis = !axis;  // True on j = 0 and 2
+    offset1 = axis ? array_mid : 0;
+    offset2 = axis ? 0 : array_mid;
+    prev_vert_index = offset2 + (crop_len - 1);  // The last vert in the list
+    
+    // Checking if the vertex is in or out of bounds
+    in1 = crayon_graphics_inbounds(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], curr_val, j);
+    
+    for(i = 0; i < crop_len; i++){
+      in2 = crayon_graphics_inbounds(crop_vert_x[offset2 + i], crop_vert_y[offset2 + i], curr_val, j);
       
-  //    if(in1 && in2){  // both IN, Save vert i
-  //      crop_vert_x[offset + new_len] = crop_vert_x[i];
-  //      crop_vert_y[offset + new_len] = crop_vert_y[i];
-  //      new_len++;
-  //    }
-  //    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
-  //      if(indexMode){
-  //        crop_vert_x[offset + new_len] = curr_val;
-  //        crop_vert_y[offset + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, indexMode);
-  //      }
-  //      else{
-  //        crop_vert_x[offset + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, indexMode);
-  //        crop_vert_y[offset + new_len] = curr_val;
-  //      }
-  //      if(in2){  // OUT-IN, save v2 aswell
-  //        crop_vert_x[offset + new_len + 1] = crop_vert_x[i];
-  //        crop_vert_y[offset + new_len + 1] = crop_vert_y[i];
-  //        new_len += 2;
-  //      }
-  //      else{  // IN-OUT
-  //        new_len++;
-  //      } 
-  //    }
-  //    // If both are OUT, we discard both
+      if(in1 && in2){  // both IN, Save vert i
+        crop_vert_x[offset1 + new_len] = crop_vert_x[offset2 + i];
+        crop_vert_y[offset1 + new_len] = crop_vert_y[offset2 + i];
+        new_len++;
+      }
+      else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
+        if(axis){
+          crop_vert_x[offset1 + new_len] = curr_val;
+          crop_vert_y[offset1 + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[offset2 + i], crop_vert_y[offset2 + i], curr_val, axis);
+        }
+        else{
+          crop_vert_x[offset1 + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[offset2 + i], crop_vert_y[offset2 + i], curr_val, axis);
+          crop_vert_y[offset1 + new_len] = curr_val;
+        }
+        
+        if(in2){  // OUT-IN, save v2 aswell
+          crop_vert_x[offset1 + new_len + 1] = crop_vert_x[offset2 + i];
+          crop_vert_y[offset1 + new_len + 1] = crop_vert_y[offset2 + i];
+          new_len += 2;
+        }
+        else{  // IN-OUT
+          new_len++;
+        } 
+      }
+      // If both are OUT, we discard both
       
-  //    // Update the prev vert
-  //    in1 = in2;
-  //    prev_vert_index = i;
-  //  }
-  //  if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
-  //    return new_len;
-  //  }
-  //  crop_len = new_len;
-  //  if(debug && crop_len >= 8){
-  //    println("After " + i + "-th Left crop, we have " + crop_len + " verts");
-  //  }
-  //}
-  
-  //return new_len;
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  // Left side first
-    // I'm going in order v4->v1, v1->v2, v2->v3, v3->v4 so I don't have to modulo check every loop
-  new_len = 0;
-  curr_val = camera_coords[0];
-  prev_vert_index = crop_len - 1;
-  in1 = (crop_vert_x[prev_vert_index] >= curr_val);  // The last vert
-  for(i = 0; i < crop_len; i++){
-    in2 = (crop_vert_x[i] >= curr_val);
-    if(in1 && in2){  // both IN, Save vert i
-      crop_vert_x[array_mid + new_len] = crop_vert_x[i];
-      crop_vert_y[array_mid + new_len] = crop_vert_y[i];
-      new_len++;
+      // Update the prev vert
+      in1 = in2;
+      prev_vert_index = i + offset2;
     }
-    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
-      crop_vert_x[array_mid + new_len] = curr_val;
-      crop_vert_y[array_mid + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, true);
-      if(in2){  // OUT-IN, save v2 aswell
-        crop_vert_x[array_mid + new_len + 1] = crop_vert_x[i];
-        crop_vert_y[array_mid + new_len + 1] = crop_vert_y[i];
-        new_len += 2;
-      }
-      else{  // IN-OUT
-        new_len++;
-      } 
+    if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
+      return new_len;
     }
-    // If both are OUT, we discard both
-    
-    // Update the prev vert
-    in1 = in2;
-    prev_vert_index = i;
-  }
-  if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
-    return new_len;
-  }
-  crop_len = new_len;
-  if(debug && crop_len >= 8){
-    println("After Left crop, we have " + crop_len + " verts");
-  }
-  
-  
-  // -----------------------------
-  
-  
-  // Top side
-  new_len = 0;
-  curr_val = camera_coords[1];
-  prev_vert_index = (crop_len - 1) + array_mid;
-  in1 = (crop_vert_y[prev_vert_index] >= curr_val);  // The last vert
-  for(i = 0; i < crop_len; i++){
-    in2 = (crop_vert_y[array_mid + i] >= curr_val);
-    if(in1 && in2){  // both IN, Save vert array_mid + i
-      crop_vert_x[new_len] = crop_vert_x[array_mid + i];
-      crop_vert_y[new_len] = crop_vert_y[array_mid + i];
-      new_len++;
+    crop_len = new_len;
+    if(debug && crop_len >= 8){
+      println("After " + j + "-th crop, we have " + crop_len + " verts");
     }
-    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
-      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
-      crop_vert_y[new_len] = curr_val;
-      if(in2){  // OUT-IN, save v2 aswell
-        crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
-        crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
-        new_len += 2;
-      }
-      else{  // IN-OUT
-        new_len++;
-      } 
-    }
-    // If both are OUT, we discard both
-    
-    // Update the prev vert
-    in1 = in2;
-    prev_vert_index = array_mid + i;
   }
-  if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
-    return new_len;
-  }
-  crop_len = new_len;
-  if(debug && crop_len >= 8){
-    println("After Top crop, we have " + crop_len + " verts");
-  }
-  
-  
-  // -----------------------------
-  
-  
-  // Right side
-  new_len = 0;
-  curr_val = camera_coords[2];
-  prev_vert_index = crop_len - 1;
-  in1 = (crop_vert_x[prev_vert_index] <= curr_val);  // The last vert
-  for(i = 0; i < crop_len; i++){
-    in2 = (crop_vert_x[i] <= curr_val);
-    if(in1 && in2){  // both IN, Save vert i
-      crop_vert_x[array_mid + new_len] = crop_vert_x[i];
-      crop_vert_y[array_mid + new_len] = crop_vert_y[i];
-      new_len++;
-    }
-    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
-      crop_vert_x[array_mid + new_len] = curr_val;
-      crop_vert_y[array_mid + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, true);
-      if(in2){  // OUT-IN, save v2 aswell
-        crop_vert_x[array_mid + new_len + 1] = crop_vert_x[i];
-        crop_vert_y[array_mid + new_len + 1] = crop_vert_y[i];
-        new_len += 2;
-      }
-      else{  // IN-OUT
-        new_len++;
-      } 
-    }
-    // If both are OUT, we discard both
-    
-    // Update the prev vert
-    in1 = in2;
-    prev_vert_index = i;
-  }
-  if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
-    return new_len;
-  }
-  crop_len = new_len;
-  if(debug && crop_len >= 8){
-    println("After Right crop, we have " + crop_len + " verts");
-  }
-  
-  
-  // -----------------------------
-  
-  
-  // Bottom side
-  new_len = 0;
-  curr_val = camera_coords[3];
-  prev_vert_index = (crop_len - 1) + array_mid;
-  in1 = (crop_vert_y[prev_vert_index] <= curr_val);  // The last vert
-  for(i = 0; i < crop_len; i++){
-    in2 = (crop_vert_y[array_mid + i] <= curr_val);
-    if(in1 && in2){  // both IN, Save vert array_mid + i
-      crop_vert_x[new_len] = crop_vert_x[array_mid + i];
-      crop_vert_y[new_len] = crop_vert_y[array_mid + i];
-      new_len++;
-    }
-    else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
-      crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
-      crop_vert_y[new_len] = curr_val;
-      if(in2){  // OUT-IN, save v2 aswell
-        crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
-        crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
-        new_len += 2;
-      }
-      else{  // IN-OUT
-        new_len++;
-      } 
-    }
-    // If both are OUT, we discard both
-    
-    // Update the prev vert
-    in1 = in2;
-    prev_vert_index = array_mid + i;
-  }
-  if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
-    return new_len;
-  }
-  crop_len = new_len;
-  if(debug && crop_len >= 8){
-    println("After Bottom crop, we have " + crop_len + " verts");
-  }
-
   
   return new_len;
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  //// Left side first
+  //  // I'm going in order v4->v1, v1->v2, v2->v3, v3->v4 so I don't have to modulo check every loop
+  //new_len = 0;
+  //curr_val = camera_coords[0];
+  //prev_vert_index = crop_len - 1;
+  //in1 = (crop_vert_x[prev_vert_index] >= curr_val);  // The last vert
+  //for(i = 0; i < crop_len; i++){
+  //  in2 = (crop_vert_x[i] >= curr_val);
+  //  if(in1 && in2){  // both IN, Save vert i
+  //    crop_vert_x[array_mid + new_len] = crop_vert_x[i];
+  //    crop_vert_y[array_mid + new_len] = crop_vert_y[i];
+  //    new_len++;
+  //  }
+  //  else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
+  //    crop_vert_x[array_mid + new_len] = curr_val;
+  //    crop_vert_y[array_mid + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, true);
+  //    if(in2){  // OUT-IN, save v2 aswell
+  //      crop_vert_x[array_mid + new_len + 1] = crop_vert_x[i];
+  //      crop_vert_y[array_mid + new_len + 1] = crop_vert_y[i];
+  //      new_len += 2;
+  //    }
+  //    else{  // IN-OUT
+  //      new_len++;
+  //    } 
+  //  }
+  //  // If both are OUT, we discard both
+    
+  //  // Update the prev vert
+  //  in1 = in2;
+  //  prev_vert_index = i;
+  //}
+  //if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
+  //  return new_len;
+  //}
+  //crop_len = new_len;
+  //if(debug && crop_len >= 8){
+  //  println("After Left crop, we have " + crop_len + " verts");
+  //}
+  
+  
+  //// -----------------------------
+  
+  
+  //// Top side
+  //new_len = 0;
+  //curr_val = camera_coords[1];
+  //prev_vert_index = (crop_len - 1) + array_mid;
+  //in1 = (crop_vert_y[prev_vert_index] >= curr_val);  // The last vert
+  //for(i = 0; i < crop_len; i++){
+  //  in2 = (crop_vert_y[array_mid + i] >= curr_val);
+  //  if(in1 && in2){  // both IN, Save vert array_mid + i
+  //    crop_vert_x[new_len] = crop_vert_x[array_mid + i];
+  //    crop_vert_y[new_len] = crop_vert_y[array_mid + i];
+  //    new_len++;
+  //  }
+  //  else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
+  //    crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
+  //    crop_vert_y[new_len] = curr_val;
+  //    if(in2){  // OUT-IN, save v2 aswell
+  //      crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
+  //      crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
+  //      new_len += 2;
+  //    }
+  //    else{  // IN-OUT
+  //      new_len++;
+  //    } 
+  //  }
+  //  // If both are OUT, we discard both
+    
+  //  // Update the prev vert
+  //  in1 = in2;
+  //  prev_vert_index = array_mid + i;
+  //}
+  //if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
+  //  return new_len;
+  //}
+  //crop_len = new_len;
+  //if(debug && crop_len >= 8){
+  //  println("After Top crop, we have " + crop_len + " verts");
+  //}
+  
+  
+  //// -----------------------------
+  
+  
+  //// Right side
+  //new_len = 0;
+  //curr_val = camera_coords[2];
+  //prev_vert_index = crop_len - 1;
+  //in1 = (crop_vert_x[prev_vert_index] <= curr_val);  // The last vert
+  //for(i = 0; i < crop_len; i++){
+  //  in2 = (crop_vert_x[i] <= curr_val);
+  //  if(in1 && in2){  // both IN, Save vert i
+  //    crop_vert_x[array_mid + new_len] = crop_vert_x[i];
+  //    crop_vert_y[array_mid + new_len] = crop_vert_y[i];
+  //    new_len++;
+  //  }
+  //  else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
+  //    crop_vert_x[array_mid + new_len] = curr_val;
+  //    crop_vert_y[array_mid + new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[i], crop_vert_y[i], curr_val, true);
+  //    if(in2){  // OUT-IN, save v2 aswell
+  //      crop_vert_x[array_mid + new_len + 1] = crop_vert_x[i];
+  //      crop_vert_y[array_mid + new_len + 1] = crop_vert_y[i];
+  //      new_len += 2;
+  //    }
+  //    else{  // IN-OUT
+  //      new_len++;
+  //    } 
+  //  }
+  //  // If both are OUT, we discard both
+    
+  //  // Update the prev vert
+  //  in1 = in2;
+  //  prev_vert_index = i;
+  //}
+  //if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
+  //  return new_len;
+  //}
+  //crop_len = new_len;
+  //if(debug && crop_len >= 8){
+  //  println("After Right crop, we have " + crop_len + " verts");
+  //}
+  
+  
+  //// -----------------------------
+  
+  
+  //// Bottom side
+  //new_len = 0;
+  //curr_val = camera_coords[3];
+  //prev_vert_index = (crop_len - 1) + array_mid;
+  //in1 = (crop_vert_y[prev_vert_index] <= curr_val);  // The last vert
+  //for(i = 0; i < crop_len; i++){
+  //  in2 = (crop_vert_y[array_mid + i] <= curr_val);
+  //  if(in1 && in2){  // both IN, Save vert array_mid + i
+  //    crop_vert_x[new_len] = crop_vert_x[array_mid + i];
+  //    crop_vert_y[new_len] = crop_vert_y[array_mid + i];
+  //    new_len++;
+  //  }
+  //  else if(in1 || in2){  // One IN, other OUT. We'll make v1' and save it
+  //    crop_vert_x[new_len] = crayon_graphic_line_plane_intersect(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], crop_vert_x[array_mid + i], crop_vert_y[array_mid + i], curr_val, false);
+  //    crop_vert_y[new_len] = curr_val;
+  //    if(in2){  // OUT-IN, save v2 aswell
+  //      crop_vert_x[new_len + 1] = crop_vert_x[array_mid + i];
+  //      crop_vert_y[new_len + 1] = crop_vert_y[array_mid + i];
+  //      new_len += 2;
+  //    }
+  //    else{  // IN-OUT
+  //      new_len++;
+  //    } 
+  //  }
+  //  // If both are OUT, we discard both
+    
+  //  // Update the prev vert
+  //  in1 = in2;
+  //  prev_vert_index = array_mid + i;
+  //}
+  //if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
+  //  return new_len;
+  //}
+  //crop_len = new_len;
+  //if(debug && crop_len >= 8){
+  //  println("After Bottom crop, we have " + crop_len + " verts");
+  //}
+
+  
+  //return new_len;
 }
 
 // overlap might go unused
