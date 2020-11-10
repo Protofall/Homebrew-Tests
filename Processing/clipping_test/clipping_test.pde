@@ -221,17 +221,15 @@ float crayon_graphic_line_plane_intersect(float x0, float y0, float x1, float y1
   return (m * curr_val) + c;
 }
 
-boolean crayon_graphics_inbounds(float x, float y, float axis, int j){
-  if(j == 0){return (x >= axis);}
-  else if(j == 1){return (y >= axis);}
-  else if(j == 2){return (x < axis);}
-  else{return (y < axis);}
+boolean _crayon_graphics_point_inbounds(float val, float axis, boolean side){
+  if(side){return (val >= axis);}
+  return (val < axis);
 }
 
 // This function might modify holder_vert_x, but it doesn't really matter anyways
   // This video taught it so well, very easy to follow:
   // https://www.youtube.com/watch?v=Euuw72Ymu0M
-int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] camera_x,
+int crayon_graphics_sutherland_hodgman(float[] crop_vert_x, float[] crop_vert_y, float[] camera_x,
     float[] camera_y, int crop_len){
   
   int array_mid = ARR_SIZE / 2;
@@ -244,7 +242,6 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   camera_coords[3] = camera_y[2];  // max_y
   
   int new_len = 0;  // Java complains it may not be initialised when we return at the end...but j loop guarantees its initialised...
-  boolean indexMode;  // false = Data is from indexes 0 - 7, true = indexes 8 - 15
   
   // Some vars
   boolean in1, in2;  // True if variable is in
@@ -254,20 +251,19 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
   // Verify this is good
   int j;
   int offset1, offset2;
-  boolean axis = false;
+  boolean axis = true;  // true = Data is from indexes 0 - 7, false = indexes 8 - 15
   for(j = 0; j < 4; j++){
     new_len = 0;
     curr_val = camera_coords[j];
-    axis = !axis;  // True on j = 0 and 2
     offset1 = axis ? array_mid : 0;
     offset2 = axis ? 0 : array_mid;
     prev_vert_index = offset2 + (crop_len - 1);  // The last vert in the list
     
     // Checking if the vertex is in or out of bounds
-    in1 = crayon_graphics_inbounds(crop_vert_x[prev_vert_index], crop_vert_y[prev_vert_index], curr_val, j);
+    in1 = _crayon_graphics_point_inbounds(axis ? crop_vert_x[prev_vert_index] : crop_vert_y[prev_vert_index], curr_val, (j < 2));
     
     for(i = 0; i < crop_len; i++){
-      in2 = crayon_graphics_inbounds(crop_vert_x[offset2 + i], crop_vert_y[offset2 + i], curr_val, j);
+      in2 = _crayon_graphics_point_inbounds(axis ? crop_vert_x[offset2 + i] : crop_vert_y[offset2 + i], curr_val, (j < 2));
       
       if(in1 && in2){  // both IN, Save vert i
         crop_vert_x[offset1 + new_len] = crop_vert_x[offset2 + i];
@@ -299,13 +295,15 @@ int sutherland_hodgman_alg(float[] crop_vert_x, float[] crop_vert_y, float[] cam
       in1 = in2;
       prev_vert_index = i + offset2;
     }
-    if(new_len == 0){  // If we disabled OOB check and poly is entirely OOB, this can happen
+    if(new_len < 3){  // If we disabled OOB check and poly is entirely OOB, this can happen. Also don't render lines/points
       return new_len;
     }
     crop_len = new_len;
     if(debug && crop_len >= 8){
       println("After " + j + "-th crop, we have " + crop_len + " verts");
     }
+
+    axis = !axis;  // True on j = 0 and 2
   }
   
   return new_len;
@@ -513,7 +511,7 @@ void renderSprite(float[] x, float[] y, float[] camera_x, float[] camera_y){
     crop_vert_y[i] = y[i];
   }
   
-  crop_len = sutherland_hodgman_alg(crop_vert_x, crop_vert_y, camera_x, camera_y, crop_len);
+  crop_len = crayon_graphics_sutherland_hodgman(crop_vert_x, crop_vert_y, camera_x, camera_y, crop_len);
   
   if(debug){
     println("Currently uses " + crop_len + " verts");
