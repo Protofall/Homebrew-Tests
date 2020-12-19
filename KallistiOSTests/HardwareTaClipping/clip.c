@@ -72,10 +72,10 @@ void draw_pic(int x, int y, int z, float x_scale, float y_scale, uint8_t list_ty
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565, dim, dim, pic, PVR_FILTER_NONE);
 
 	// Hardware cropping stuff
-	cxt.gen.shading = PVR_SHADE_FLAT;
-	cxt.gen.clip_mode = hardware_crop_mode;
-	cxt.blend.src = PVR_BLEND_SRCALPHA;
-	cxt.blend.dst = PVR_BLEND_INVSRCALPHA;
+	// cxt.gen.shading = PVR_SHADE_FLAT;	// Its PVR_SHADE_GOURAUD by default
+	cxt.gen.clip_mode = hardware_crop_mode;	// Seems to be off by default
+	// cxt.blend.src = PVR_BLEND_SRCALPHA;
+	// cxt.blend.dst = PVR_BLEND_INVSRCALPHA;
 
 	pvr_poly_compile(&hdr, &cxt);
 	pvr_prim(&hdr, sizeof(hdr));
@@ -126,10 +126,11 @@ void draw_untextured_poly(int x0, int y0, int x1, int y1, float r, float g, floa
 	pvr_poly_cxt_col(&cxt, list_type);
 
 	// Hardware cropping stuff
-	cxt.gen.shading = PVR_SHADE_FLAT;
-	cxt.gen.clip_mode = hardware_crop_mode;
-	cxt.blend.src = PVR_BLEND_SRCALPHA;
-	cxt.blend.dst = PVR_BLEND_INVSRCALPHA;
+	// cxt.gen.shading = PVR_SHADE_FLAT;	// Its PVR_SHADE_GOURAUD by default
+	cxt.gen.clip_mode = hardware_crop_mode;	// Seems to be off by default
+	// cxt.blend.src = PVR_BLEND_SRCALPHA;	// If (list_type > PVR_LIST_OP_MOD) (AKA not an OP list of any kind) then
+										// These are the default, otherwise the defaults are PVR_BLEND_ONE and PVR_BLEND_ZERO
+	// cxt.blend.dst = PVR_BLEND_INVSRCALPHA;
 
 	pvr_poly_compile(&hdr, &cxt);
 	pvr_prim(&hdr, sizeof(hdr));
