@@ -27,14 +27,14 @@ rm:
 fade.cdi: $(SCRAMBLED)
 	sh-elf-objcopy -R .stack -O binary fade.elf fade.bin
 	$(KOS_BASE)/utils/scramble/scramble fade.bin 1st_read.bin
-	mkisofs -G $(KOS_BASE)/../IP.BIN -C 0,11702 -J -l -r -o fade.iso .
+	genisoimage -G $(KOS_BASE)/../IP.BIN -C 0,11702 -J -l -r -o fade.iso .
 	cdi4dc fade.iso fade.cdi
 
 $(SCRAMBLED): fade.elf
 	sh-elf-objcopy -R .stack -O binary fade.elf fade.bin
 	$(KOS_BASE)/utils/scramble/scramble fade.bin $(SCRAMBLED)
 
-fade.elf: $(OBJS) romdisk_boot.o 
+fade.elf: $(OBJS) romdisk_boot.o
 	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) -o $@ $(KOS_START) $^ -lpng -lz -lm $(KOS_LIBS)
 
 romdisk_boot.img:
