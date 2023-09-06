@@ -1,3 +1,11 @@
+# IMPORTANT
+
+This repo is no longer active, instead I have moved to gitlab. Therefore I will no longer be updating this repository.
+
+To get the latest changes, go to: https://gitlab.com/Protofall/Homebrew-Tests
+
+-----------------------------------------
+
 # Protofall's Homebrew Tests
 
 This repository is basically a bunch of my projects I've worked on for multiple Graphics systems. KallistiOS/KOS (Dreamcast) and Processing (Windows/Mac/Linux). KallistiOS is a free, BSD license-based development system for the Sega Dreamcast game console.
